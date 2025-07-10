@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Матрица Эйзенхауэра</h2>
+<div class="matrix-grid">
+  <div>
+    <h3>Срочно и важно</h3>
+    {% for quest in urgent_important %}
+      <p>{{ quest.title }}</p>
+    {% endfor %}
+  </div>
+  <div>
+    <h3>Срочно, но не важно</h3>
+    {% for quest in urgent_not_important %}
+      <p>{{ quest.title }}</p>
+    {% endfor %}
+  </div>
+  <div>
+    <h3>Важно, но не срочно</h3>
+    {% for quest in not_urgent_important %}
+      <p>{{ quest.title }}</p>
+    {% endfor %}
+  </div>
+  <div>
+    <h3>Не важно и не срочно</h3>
+    {% for quest in not_urgent_not_important %}
+      <p>{{ quest.title }}</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

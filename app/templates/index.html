@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<script src="{{ url_for('static', path='/js/index.js') }}" defer></script>
+<h1>Активные квесты</h1>
+<div class="cards-container" id="cardsContainer">
+  {% for quest in quests %}
+  <div class="card {{rarity_class(quest.rarity)}}" onclick="openModal({{quest.id}})">
+    <div class="card-header">
+        <div class="card-title">{{quest.title}}</div>
+        <div class="card-deadline">{{quest.deadline}}</div>
+    </div>
+    <div class="card-author">{{quest.author}}</div>
+    <div class="card-text">{{quest.description}}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <h2 class="modal-title" id="modalTitle"></h2>
+        <div class="modal-author" id="modalAuthor"></div>
+        <div class="modal-deadline" id="modalDeadline"></div>
+        <p class="modal-text" id="modalText"></p>
+        <span class="modal-type" id="modalType"></span>
+    </div>
+</div>
+{% endblock %}

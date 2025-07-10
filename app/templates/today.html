@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Задачи на сегодня</h2>
+<ol>
+  {% for quest in quests %}
+    <li>
+      <strong>{{ quest.title }}</strong> — {{ quest.description }}
+      <p>Дедлайн: {{ quest.deadline if quest.deadline else '—' }}</p>
+      <form action="/complete/{{ quest.id }}" method="post" style="display:inline;">
+        <button>✔ Выполнено</button>
+      </form>
+      <form action="/fail/{{ quest.id }}" method="post" style="display:inline;">
+        <button>✘ Провал</button>
+      </form>
+    </li>
+  {% else %}
+    <p>Сегодня задач нет — ты свободен! 🎉</p>
+  {% endfor %}
+</ol>
+{% endblock %}

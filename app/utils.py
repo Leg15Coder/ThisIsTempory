@@ -9,6 +9,9 @@ def rarity_class(rarity: str) -> str:
         "редкий": "rare",
         "эпический": "epic",
         "легендарный": "legendary",
+        "выполняется": "active",
+        "проваленный": "failed",
+        "завершённый": "finished"
     }
     return mapping.get(rarity.lower())
 

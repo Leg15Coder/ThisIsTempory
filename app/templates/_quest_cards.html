@@ -1,0 +1,10 @@
+{% for quest in quests %}
+  <div class="card {{get_class(quest.rarity)}} {{get_class(quest.status)}}" onclick="openModal({{quest.id}})">
+    <div class="card-header">
+        <div class="card-title">{{quest.title}}</div>
+        <div class="card-deadline">{{quest.deadline if quest.deadline else "бессрочно"}}</div>
+    </div>
+    <div class="card-author">От: {{quest.author}}</div>
+    <div class="card-text">{{quest.description}}</div>
+  </div>
+{% endfor %}

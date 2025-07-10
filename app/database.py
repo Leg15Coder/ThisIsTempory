@@ -32,7 +32,7 @@ class Quest(Base):
     author = Column(String, default="???")
     description = Column(Text)
     deadline = Column(DateTime)
-    created = Column(DateTime, default=datetime.now())
+    created = Column(DateTime)
     rarity = Column(Enum(QuestRarity), default=QuestRarity.common)
     status = Column(Enum(QuestStatus), default=QuestStatus.active)
 

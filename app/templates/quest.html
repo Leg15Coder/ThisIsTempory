@@ -1,7 +1,26 @@
 <div class="modal-content">
-    <h2 class="modal-title" id="modalTitle">{{quest.title}}</h2>
-    <div class="modal-author" id="modalAuthor">{{quest.author}}</div>
-    <div class="modal-deadline" id="modalDeadline">{{quest.deadline}}</div>
+    <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">{{quest.title}}</h2>
+        <div class="modal-deadline" id="modalDeadline">{{quest.deadline if quest.deadline else "бессрочно"}}</div>
+    </div>
+    <div class="modal-author" id="modalAuthor">От: {{quest.author}}</div>
     <p class="modal-text" id="modalText">{{quest.description}}</p>
-    <span class="modal-type" id="modalType">{{quest.rarity}}</span>
+    <div class="modal-footer">
+          <div>
+              <form action="/complete/{{quest.id}}" method="POST">
+                  <button class="modal-btn accept-modal-btn" type="submit">Сдать</button>
+              </form>
+              <form action="/delete/{{quest.id}}" method="POST">
+                  <button class="modal-btn delete-modal-btn" type="submit">Удалить</button>
+              </form>
+          </div>
+          <div>
+              <form action="/fail/{{quest.id}}" method="POST">
+                  <button class="modal-btn decline-modal-btn" type="submit">Провалить</button>
+              </form>
+              <form action="/uncomplete/{{quest.id}}" method="POST">
+                  <button class="modal-btn unwatched-modal-btn" type="submit">Включить</button>
+              </form>
+          </div>
+    </div>
 </div>

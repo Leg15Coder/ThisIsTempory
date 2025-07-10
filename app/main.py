@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Request, Form, status
-from fastapi.responses import RedirectResponse
-from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from datetime import datetime
+from datetime import datetime, timedelta as td
 import random
+from sqlalchemy import or_, case
 
 from app.utils import rarity_class
 from app.database import QuestStatus, QuestRarity, Quest, SessionLocal
@@ -14,24 +14,101 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 
-motivations = [
-    "Сегодняшний шаг — завтрашняя победа.",
-    "Эпический путь состоит из обычных дел.",
-    "Каждое дело — это шаг к легенде.",
-    "Ты — герой своей истории.",
-]
-
-
 @app.get("/", response_class=HTMLResponse)
 async def read_quests(request: Request):
     with SessionLocal() as db:
-        quests = db.query(Quest).filter(Quest.status == QuestStatus.active).order_by(Quest.deadline).all()
+        quests = db.query(Quest).filter(Quest.status == QuestStatus.active).all()
         return templates.TemplateResponse("index.html", {
             "request": request,
             "quests": quests,
-            "now": datetime.now,
-            "rarity_class": rarity_class
+            "post_url": "/filter-quests",
+            "get_class": rarity_class,
+            "main_text": "Активные квесты"
         })
+
+
+async def flex_quest_filter(quests, sort_type: str, find: str):
+    if find is not None:
+        search = f"%{find}%"
+        quests = quests.filter(
+            or_(
+                Quest.title.ilike(search),
+                Quest.author.ilike(search),
+                Quest.description.ilike(search),
+                Quest.rarity.ilike(search),
+                Quest.status.ilike(search),
+            )
+        )
+
+        try:
+            date_search = datetime.strptime(find, "%Y-%m-%d").date()
+            quests = quests.filter(
+                or_(
+                    Quest.deadline == date_search,
+                    Quest.created == date_search,
+                )
+            )
+        except ValueError:
+            pass
+
+    if sort_type is not None:
+        sort_atr, sort_order = sort_type.split('-')
+        is_asc = sort_order != 'desc'
+        if sort_atr in ('created', 'deadline', 'title'):
+            exec(f'quests = quests.order_by(Quest.{sort_atr}.asc() if is_asc else Quest.{sort_atr}.desc())')
+        elif sort_atr == 'rarity':
+            order_expr = case(
+                {
+                    QuestRarity.common: 1,
+                    QuestRarity.uncommon: 2,
+                    QuestRarity.rare: 3,
+                    QuestRarity.epic: 4,
+                    QuestRarity.legendary: 5,
+                },
+                value=Quest.rarity
+            )
+            quests = quests.order_by(order_expr.asc() if is_asc else order_expr.desc())
+    return quests.all()
+
+
+@app.post("/filter-quests")
+async def sort_quests(
+    request: Request,
+    sort_type: str = Form(None),
+    find: str = Form(None),
+):
+    with SessionLocal() as db:
+        quests = db.query(Quest).filter(Quest.status == QuestStatus.active)
+        quests = await flex_quest_filter(quests, sort_type, find)
+
+        # Рендерим только блок с карточками
+        cards_html = templates.get_template("_quest_cards.html").render(
+            request=request,
+            quests=quests,
+            get_class=rarity_class
+        )
+
+        return JSONResponse({"cards_html": cards_html})
+
+
+@app.post("/archive/filter-quests")
+async def sort_archive_quests(
+    request: Request,
+    sort_type: str = Form(None),
+    find: str = Form(None),
+):
+    with SessionLocal() as db:
+        quests = db.query(Quest).filter(Quest.status != QuestStatus.active)
+        quests = await flex_quest_filter(quests, sort_type, find)
+
+        # Рендерим только блок с карточками
+        cards_html = templates.get_template("_quest_cards.html").render(
+            request=request,
+            quests=quests,
+            get_class=rarity_class
+        )
+
+        return JSONResponse({"cards_html": cards_html})
 
 
 @app.get("/create", response_class=HTMLResponse)
@@ -62,20 +139,24 @@ async def create_quest(
     deadline_time: str = Form(None),
     rarity: QuestRarity = Form(...)
 ):
-    print(1)
 
     parsed_deadline = None
-    deadline = f"{deadline_date}T{deadline_time}"
     if deadline_date or deadline_time:
+        if not deadline_time:
+            deadline_time = "00:00"
+        if not deadline_date:
+            deadline_date = datetime.now().date() + td(days=1)
+
+        deadline = f"{deadline_date}T{deadline_time}"
         parsed_deadline = datetime.strptime(deadline, "%Y-%m-%dT%H:%M")
 
     with SessionLocal() as db:
-        print(description)
         quest = Quest(
             title=title,
             author=author,
-            description=description.replace('\n', '<br>'),
+            description=description,
             deadline=parsed_deadline,
+            created=datetime.now(),
             rarity=rarity
         )
         db.add(quest)
@@ -86,21 +167,19 @@ async def create_quest(
 @app.post("/complete/{quest_id}")
 async def mark_complete(quest_id: int):
     with SessionLocal() as db:
-        for q in db.query(Quest).all():
-            if q.id == quest_id:
-                q.status = QuestStatus.finished
-                break
-    return RedirectResponse("/today", status_code=303)
+        quest = db.query(Quest).filter(Quest.id == quest_id).first()
+        quest.status = QuestStatus.finished
+        db.commit()
+    return RedirectResponse("/", status_code=303)
 
 
 @app.post("/fail/{quest_id}")
 async def mark_fail(quest_id: int):
     with SessionLocal() as db:
-        for q in db.query(Quest).all():
-            if q.id == quest_id:
-                q.status = QuestStatus.failed
-                break
-    return RedirectResponse("/today", status_code=303)
+        quest = db.query(Quest).filter(Quest.id == quest_id).first()
+        quest.status = QuestStatus.failed
+        db.commit()
+    return RedirectResponse("/", status_code=303)
 
 
 @app.get("/today", response_class=HTMLResponse)
@@ -150,19 +229,22 @@ async def matrix(request: Request):
 @app.get("/archive", response_class=HTMLResponse)
 async def archive(request: Request):
     with SessionLocal() as db:
-        completed = [q for q in db.query(Quest).all() if q.status == QuestStatus.finished]
-        failed = [q for q in db.query(Quest).all() if q.status == QuestStatus.failed]
-        return templates.TemplateResponse("archive.html", {"request": request, "completed": completed, "failed": failed})
+        quests = db.query(Quest).filter(Quest.status != QuestStatus.active).all()
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "quests": quests,
+            "get_class": rarity_class,
+            "post_url": "/archive/filter-quests",
+            "main_text": "Завершённые квесты"
+        })
 
 
 @app.post("/uncomplete/{quest_id}")
-@app.post("/unfail/{quest_id}")
 async def return_to_active(quest_id: int):
     with SessionLocal() as db:
-        for q in db.query(Quest).all():
-            if q.id == quest_id:
-                q.status = QuestStatus.active
-                break
+        quest = db.query(Quest).filter(Quest.id == quest_id).first()
+        quest.status = QuestStatus.active
+        db.commit()
     return RedirectResponse("/archive", status_code=303)
 
 
@@ -170,6 +252,6 @@ async def return_to_active(quest_id: int):
 async def delete_quest(quest_id: int):
     with SessionLocal() as db:
         quest = db.query(Quest).filter(Quest.id == quest_id).first()
-        if quest:
-            db.delete(quest)
-        return RedirectResponse("/archive", status_code=303)
+        db.delete(quest)
+        db.commit()
+        return RedirectResponse("/", status_code=303)

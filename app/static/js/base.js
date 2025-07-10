@@ -4,6 +4,7 @@ const main = document.getElementById('main');
 
 // Toggle sidebar
 menuBtn.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
+    sidebar.classList.toggle('opened');
+    menuBtn.classList.toggle('open');
     main.classList.toggle('sidebar-open');
 });

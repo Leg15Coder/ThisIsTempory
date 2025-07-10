@@ -1,19 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <script src="{{ url_for('static', path='/js/index.js') }}" defer></script>
-<h1>Активные квесты</h1>
-<div class="cards-container" id="cardsContainer">
-  {% for quest in quests %}
-  <div class="card {{rarity_class(quest.rarity)}}" onclick="openModal({{quest.id}})">
-    <div class="card-header">
-        <div class="card-title">{{quest.title}}</div>
-        <div class="card-deadline">{{quest.deadline}}</div>
-    </div>
-    <div class="card-author">{{quest.author}}</div>
-    <div class="card-text">{{quest.description}}</div>
-  </div>
-  {% endfor %}
-</div>
+<h1>{{main_text}}</h1>
+<div class="cards-container" id="cardsContainer"></div>
 
 <div class="modal" id="modal">
     <div class="modal-content">
@@ -22,6 +11,105 @@
         <div class="modal-deadline" id="modalDeadline"></div>
         <p class="modal-text" id="modalText"></p>
         <span class="modal-type" id="modalType"></span>
+    </div>
+</div>
+
+<!-- Основные элементы управления (в углу страницы) -->
+<form action="{{post_url}}" method="post" id="fastSortForm">
+    <div class="quick-controls">
+        <select id="quickSort" class="pixel-select small" name="sort_type">
+            <option value="created-desc">Сначала новые</option>
+            <option value="deadline-asc">Ближайшие дедлайны</option>
+            <option value="title-asc">А-Я</option>
+            <option value="rarity-desc">Сначала сложные</option>
+        </select>
+        <input type="text" id="quickSearch" placeholder="Найти..." class="pixel-input small" name="find">
+        <button id="openAdvancedFilters" class="pixel-button small" type="button">⚙️</button>
+    </div>
+</form>
+
+<!-- Модальное окно расширенной фильтрации -->
+<div class="modal" id="filtersModal">
+    <div class="modal-content">
+        <button class="modal-close" id="closeFiltersModal">&times;</button>
+        <h2 class="modal-title">Расширенные фильтры</h2>
+
+        <div class="filters-section">
+            <h3>Сортировка</h3>
+            <div class="filter-row">
+                <label for="advSortBy">Критерий:</label>
+                <select id="advSortBy" class="pixel-select">
+                    <option value="created">Дата создания</option>
+                    <option value="deadline">Дедлайн</option>
+                    <option value="title">Название</option>
+                    <option value="rarity">Редкость</option>
+                </select>
+
+                <label for="advSortOrder">Порядок:</label>
+                <select id="advSortOrder" class="pixel-select">
+                    <option value="asc">По возрастанию</option>
+                    <option value="desc">По убыванию</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="filters-section">
+            <h3>Фильтры</h3>
+
+            <div class="filter-row">
+                <label for="advRarity">Редкость:</label>
+                <select id="advRarity" class="pixel-select">
+                    <option value="all">Все</option>
+                    <option value="common">Обычный</option>
+                    <option value="uncommon">Необычный</option>
+                    <option value="rare">Редкий</option>
+                    <option value="epic">Эпический</option>
+                    <option value="legendary">Легендарный</option>
+                </select>
+            </div>
+
+            <div class="filter-row">
+                <label for="advDeadline">Дедлайн:</label>
+                <select id="advDeadline" class="pixel-select">
+                    <option value="all">Все</option>
+                    <option value="today">Сегодня</option>
+                    <option value="tomorrow">Завтра</option>
+                    <option value="week">На этой неделе</option>
+                    <option value="future">Будущие</option>
+                    <option value="overdue">Просроченные</option>
+                </select>
+            </div>
+
+            <div class="filter-row">
+                <label for="advAuthor">Автор:</label>
+                <input type="text" id="advAuthor" placeholder="Фильтр по автору" class="pixel-input">
+            </div>
+        </div>
+
+        <div class="filters-section">
+            <h3>Текстовый поиск</h3>
+            <input type="text" id="advSearchQuery" placeholder="Введите поисковый запрос..." class="pixel-input">
+
+            <div class="search-options">
+                <label>
+                    <input type="checkbox" id="searchInTitle" checked>
+                    В названиях
+                </label>
+                <label>
+                    <input type="checkbox" id="searchInDescription" checked>
+                    В описаниях
+                </label>
+                <label>
+                    <input type="checkbox" id="searchInAuthor">
+                    В авторах
+                </label>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button id="resetFilters" class="pixel-button secondary">Сбросить</button>
+            <button id="applyAdvancedFilters" class="pixel-button">Применить</button>
+        </div>
     </div>
 </div>
 {% endblock %}

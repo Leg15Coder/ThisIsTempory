@@ -1,15 +1,27 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>The Last Reality</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
-  <script src="{{ url_for('static', path='/js/base.js') }}" defer></script>
+    <meta charset="UTF-8">
+    <title>The Last Reality</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', path='/favicon.ico') }}" type="image/x-icon">
+    <script src="{{ url_for('static', path='/js/base.js') }}" defer></script>
 </head>
 <body>
+    <div class="gradient-bg">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+
     <header class="header">
-        <button class="menu-btn" id="menuBtn">☰ Меню</button>
+        <a class="menu-btn" id="menuBtn">
+            <div class="menu-burger"></div>
+        </a>
     </header>
 
     <aside class="sidebar" id="sidebar">
@@ -29,10 +41,10 @@
     </main>
 
     <footer class="footer">
-        <div>Pixel Magic Quest Tracker © 2023</div>
+        <div>© 2025</div>
         <div class="footer-links">
-            <a href="#" class="footer-link">Контакты</a>
-            <a href="#" class="footer-link">Помощь</a>
+            <a href="https://t.me/dimka_ryaz" class="footer-link">Контакты</a>
+            <a href="/help" class="footer-link">Помощь</a>
         </div>
     </footer>
 </body>

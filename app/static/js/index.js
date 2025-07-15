@@ -1,12 +1,6 @@
 // DOM elements
 const cardsContainer = document.getElementById('cardsContainer');
 const modal = document.getElementById('modal');
-const modalClose = document.getElementById('modalClose');
-const modalTitle = document.getElementById('modalTitle');
-const modalAuthor = document.getElementById('modalAuthor');
-const modalDeadline = document.getElementById('modalDeadline');
-const modalText = document.getElementById('modalText');
-const modalType = document.getElementById('modalType');
 
 // Управление модальным окном фильтров
 const openFiltersBtn = document.getElementById('openAdvancedFilters');
@@ -129,3 +123,47 @@ resetFiltersBtn.addEventListener('click', function() {
         el.checked = el.id === 'searchInTitle' || el.id === 'searchInDescription';
     });
 });
+
+function fetchProgress(questId) {
+    fetch(`/quest/${questId}/progress`)
+        .then(response => response.json())
+        .then(data => updateProgress(data.progress, data.total, data.completed));
+}
+
+function updateProgress(percent, total, completed) {
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+
+
+    progressFill.style.width = `${percent}%`;
+    progressPercent.textContent = percent;
+
+    // Смена цвета
+    if (percent < 30) {
+        progressFill.style.backgroundColor = 'var(--accent)';
+    } else if (percent < 70) {
+        progressFill.style.backgroundColor = 'var(--uncommon)';
+    } else {
+        progressFill.style.backgroundColor = 'var(--rare)';
+    }
+}
+
+function updateCheckboxSubtask(questId, subtaskId, completed) {
+    fetch(`/subtask/${subtaskId}/checkbox`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ completed: completed })
+    }).then(() => fetchProgress(questId));
+}
+
+function updateNumericSubtask(questId, subtaskId, current) {
+    fetch(`/subtask/${subtaskId}/numeric`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ current: parseFloat(current) })
+    }).then(() => fetchProgress(questId));
+}

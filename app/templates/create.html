@@ -3,7 +3,7 @@
 <script src="{{ url_for('static', path='/js/create.js') }}" defer></script>
 <h2 class="modal-title">Создать новый квест</h2>
 
-<form action="/create" method="post" class="form" id="questForm">
+<form action="/create" method="post" class="form" id="questForm" enctype="multipart/form-data">
     <div class="form-group">
         <label for="questTitle">Название:</label>
         <input type="text" id="questTitle" maxlength="64" required class="pixel-input" name="title">
@@ -38,6 +38,15 @@
             <option>Эпический</option>
             <option>Легендарный</option>
         </select>
+    </div>
+
+    <div class="checkboxes-container">
+        <label>Подзадачи:</label>
+        <div id="subtasksList"></div>
+        <div class="add-subtask-buttons">
+            <button type="button" id="addCheckbox" class="add-subtask">Добавить чекбокс</button>
+            <button type="button" id="addNumeric" class="add-subtask">Добавить числовую цель</button>
+        </div>
     </div>
 
     <button type="submit" class="pixel-button">Создать квест</button>

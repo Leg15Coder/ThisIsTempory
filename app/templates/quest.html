@@ -1,10 +1,41 @@
 <div class="modal-content">
     <div class="modal-header">
         <h2 class="modal-title" id="modalTitle">{{quest.title}}</h2>
-        <div class="modal-deadline" id="modalDeadline">{{quest.deadline if quest.deadline else "бессрочно"}}</div>
+        <div class="modal-deadline" id="modalDeadline">⏱ {{quest.deadline.strftime('%d.%m.%Y %H:%M') if quest.deadline else "бессрочно"}}</div>
     </div>
     <div class="modal-author" id="modalAuthor">От: {{quest.author}}</div>
     <p class="modal-text" id="modalText">{{quest.description}}</p>
+
+    <div id="subtaskList">
+        {% for subtask in quest.subtasks %}
+            {% if subtask.type == 'checkbox' %}
+                <div class="subtask-item">
+                    <input type="checkbox" id="st_{{subtask.id}}" {% if subtask.completed %}checked{% endif %}
+                           onchange="updateCheckboxSubtask({{quest.id}}, {{subtask.id}}, this.checked)">
+                    <label for="st_{{subtask.id}}">{{subtask.description}}</label>
+                    <!-- <span class="subtask-weight">({{subtask.weight}} очков)</span> -->
+                </div>
+            {% else %}
+                <div class="subtask-item">
+                    <label>{{subtask.description}}</label>
+                    <div class="numeric-progress">
+                        <input type="number" value="{{subtask.current}}" min="0" max="{{subtask.target}}"
+                               onchange="updateNumericSubtask({{quest.id}}, {{subtask.id}}, this.value)">
+                        <span>/ {{subtask.target}}</span>
+                    </div>
+                    <!-- <span class="subtask-weight">({{subtask.weight}} очков)</span> -->
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="progress-container" id="progressContainer" {% if not (quest.checkbox_subtasks or quest.numeric_subtasks) %}style="display: none;"{% endif %}>
+        <div class="progress-text">Выполнено: <span id="progressPercent">{{quest.progress|default(0)}}</span>%</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: {{quest.progress|default(0)}}%"></div>
+        </div>
+    </div>
+
     <div class="modal-footer">
           <div>
               <form action="/complete/{{quest.id}}" method="POST">

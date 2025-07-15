@@ -1,20 +1,63 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Задачи на сегодня</h2>
-<ol>
-  {% for quest in quests %}
-    <li>
-      <strong>{{ quest.title }}</strong> — {{ quest.description }}
-      <p>Дедлайн: {{ quest.deadline if quest.deadline else '—' }}</p>
-      <form action="/complete/{{ quest.id }}" method="post" style="display:inline;">
-        <button>✔ Выполнено</button>
+<script src="{{ url_for('static', path='/js/today.js') }}" defer></script>
+<h2>План на сегодня</h2>
+
+<div class="today-container">
+  {% for quest in quests_for_approve %}
+  <div class="today-card {{get_class(quest.rarity)}}" onclick="openModal({{quest.id}})">
+    <div class="today-card-header">
+      <h3 class="today-card-title">{{ quest.title }}</h3>
+      <div class="today-card-meta">
+        <span class="today-card-author">От: {{quest.author}}</span>
+        <span class="today-card-deadline">⏱ {{ quest.deadline if quest.deadline else 'бессрочно' }}</span>
+      </div>
+    </div>
+
+    <div class="today-card-description">
+      {{ quest.description }}
+    </div>
+
+    <div class="today-card-actions">
+      <form action="/today/quest/{{ quest.id }}" method="post" class="today-form">
+        <button type="submit" class="pixel-button accept-btn">✔ Принять</button>
       </form>
-      <form action="/fail/{{ quest.id }}" method="post" style="display:inline;">
-        <button>✘ Провал</button>
+      <form action="/today/quest/{{ quest.id }}" method="post" class="today-form">
+        <input type="hidden" name="_method" value="DELETE">
+        <button type="submit" class="pixel-button decline-btn">✘ Отложить</button>
       </form>
-    </li>
-  {% else %}
-    <p>Сегодня задач нет — ты свободен! 🎉</p>
+    </div>
+  </div>
   {% endfor %}
-</ol>
+  {% for quest in quests %}
+  <div class="today-card {{get_class(quest.rarity)}}" onclick="openModal({{quest.id}})">
+    <div class="today-card-header">
+      <h3 class="today-card-title">{{ quest.title }}</h3>
+      <div class="today-card-meta">
+        <span class="today-card-author">От: {{quest.author}}</span>
+        <span class="today-card-deadline">⏱ {{ quest.deadline if quest.deadline else 'бессрочно' }}</span>
+      </div>
+    </div>
+
+    <div class="today-card-description">
+      {{ quest.description }}
+    </div>
+  </div>
+  {% else %}
+  <div class="today-empty">
+    <div class="today-empty-icon">🎉</div>
+    <p>Сегодня задач нет — ты свободен!</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <h2 class="modal-title" id="modalTitle"></h2>
+    <div class="modal-author" id="modalAuthor"></div>
+    <div class="modal-deadline" id="modalDeadline"></div>
+    <p class="modal-text" id="modalText"></p>
+    <span class="modal-type" id="modalType"></span>
+  </div>
+</div>
 {% endblock %}

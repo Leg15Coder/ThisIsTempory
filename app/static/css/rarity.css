@@ -1,0 +1,93 @@
+.rarity-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.rarity-item {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    border: var(--pixel-size) solid;
+}
+
+/* Классы редкостей */
+.rarity-item.common {
+    background-color: var(--bg-common);
+    border-color: var(--common);
+}
+
+.rarity-item.uncommon,
+.today-card.uncommon,
+.modal-content.uncommon,
+.card.uncommon {
+    background-color: var(--bg-uncommon);
+    border-color: var(--uncommon);
+}
+
+.rarity-item.rare,
+.today-card.rare,
+.modal-content.rare,
+.card.rare {
+    background-color: var(--bg-rare);
+    border-color: var(--rare);
+}
+
+.rarity-item.epic,
+.today-card.epic,
+.modal-content.epic,
+.card.epic {
+    background-color: var(--bg-epic);
+    border-color: var(--epic);
+}
+
+.rarity-item.legendary,
+.today-card.legendary,
+.modal-content.legendary,
+.card.legendary {
+    background-color: var(--bg-legendary);
+    border-color: var(--legendary);
+    transition:
+            box-shadow 2s ease-in-out,
+            background 2s ease-in-out,
+            transform 0.5s ease;
+}
+
+.modal-content.uncommon:hover,
+.card.uncommon:hover {
+    box-shadow: 0 7px 20px var(--uncommon);
+}
+
+.modal-content.rare:hover,
+.card.rare:hover {
+    box-shadow: 0 7px 20px var(--rare);
+}
+
+.modal-content.epic:hover,
+.card.epic:hover {
+    box-shadow: 0 7px 20px var(--epic);
+}
+
+.rarity-item.legendary,
+.modal-content.legendary:hover,
+.card.legendary:hover {
+    box-shadow: 0 7px 20px var(--legendary);
+    animation: legendaryGlow 4s infinite linear;
+}
+
+.modal-title.uncommon {
+    color: var(--uncommon);
+}
+
+.modal-title.rare {
+    color: var(--rare);
+}
+
+.modal-title.epic {
+    color: var(--epic);
+}
+
+.modal-title.legendary {
+    color: var(--legendary);
+}

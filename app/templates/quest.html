@@ -1,6 +1,56 @@
-<div class="modal-content">
+<div class="modal-content {{get_class(quest.rarity)}}">
+    {% if quest.parents or quest.children %}
+    <div class="quest-chain">
+        {% for parent in quest.parents|reverse %}
+            <div class="quest-chain-item
+                 {% if parent.status == 'Завершённый' %}completed{% endif %}
+                 {% if parent.status == 'Проваленный' %}failed{% endif %}
+                 {% if parent.status == 'Выполняется' %}active{% endif %}
+                 {% if parent.status == 'Неактивный' %}inactive{% endif %}"
+
+                 {% if parent.status != 'Неактивный' %}
+                 onclick="openModal({{parent.id}})"
+                 title="{{parent.title}}"
+                 {% endif %}>
+                {% if parent.status == 'Завершённый' %}✓
+                {% elif parent.status == 'Проваленный' %}✗
+                {% elif parent.status == 'Выполняется' %}•
+                {% else %}{% endif %}
+            </div>
+            <div class="quest-chain-connector"></div>
+        {% endfor %}
+
+        <div class="quest-chain-item current" title="{{quest.title}}">
+            {% if quest.status == 'Завершённый' %}✓
+            {% elif quest.status == 'Проваленный' %}✗
+            {% elif quest.status == 'Выполняется' %}•
+            {% elif child.status == 'Неактивный' %}?
+            {% else %}{% endif %}</div>
+
+        {% for child in quest.children %}
+            <div class="quest-chain-connector"></div>
+            <div class="quest-chain-item
+                 {% if child.status == 'Завершённый' %}completed{% endif %}
+                 {% if child.status == 'Проваленный' %}failed{% endif %}
+                 {% if child.status == 'Выполняется' %}active{% endif %}
+                 {% if child.status == 'Неактивный' %}inactive{% endif %}"
+
+                 {% if child.status != 'Неактивный' %}
+                 onclick="openModal({{child.id}})"
+                 title="{{child.title}}"
+                 {% endif %}>
+                {% if child.status == 'Завершённый' %}✓
+                {% elif child.status == 'Проваленный' %}✗
+                {% elif child.status == 'Выполняется' %}•
+                {% elif child.status == 'Неактивный' %}?
+                {% else %}{% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="modal-header">
-        <h2 class="modal-title" id="modalTitle">{{quest.title}}</h2>
+        <h2 class="modal-title {{get_class(quest.rarity)}}" id="modalTitle">{{quest.title}}</h2>
         <div class="modal-deadline" id="modalDeadline">⏱ {{quest.deadline.strftime('%d.%m.%Y %H:%M') if quest.deadline else "бессрочно"}}</div>
     </div>
     <div class="modal-author" id="modalAuthor">От: {{quest.author}}</div>

@@ -1,5 +1,5 @@
 from functools import wraps
-from app.database import SessionLocal
+from app.tasks.database import SessionLocal
 
 
 def rarity_class(rarity: str) -> str:

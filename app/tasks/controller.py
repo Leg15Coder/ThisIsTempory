@@ -1,7 +1,8 @@
+import time
 from datetime import datetime, timedelta as td
 
 from sqlalchemy import or_, case
-from app.database import QuestStatus, QuestRarity, Quest
+from app.tasks.database import QuestStatus, QuestRarity, Quest, SessionLocal, QuestGenerator
 
 
 async def flex_quest_filter(quests, sort_type: str, find: str):
@@ -32,17 +33,24 @@ async def flex_quest_filter(quests, sort_type: str, find: str):
         sort_atr, sort_order = sort_type.split('-')
         is_asc = sort_order != 'desc'
         if sort_atr in ('created', 'deadline', 'title'):
-            exec(f'quests = quests.order_by(Quest.{sort_atr}.asc() if is_asc else Quest.{sort_atr}.desc())')
+            sort_column = getattr(Quest, sort_atr)
+            quests = quests.order_by(sort_column.asc() if is_asc else sort_column.desc())
         elif sort_atr == 'rarity':
             order_expr = case(
                 {
                     QuestRarity.common: 1,
+                    "Обычный": 1,
                     QuestRarity.uncommon: 2,
+                    "Необычный": 2,
                     QuestRarity.rare: 3,
+                    "Редкий": 3,
                     QuestRarity.epic: 4,
+                    "Эпический": 4,
                     QuestRarity.legendary: 5,
+                    "Легендарный": 5
                 },
-                value=Quest.rarity
+                value=Quest.rarity,
+                else_=-1,
             )
             quests = quests.order_by(order_expr.asc() if is_asc else order_expr.desc())
     return quests.all()
@@ -64,3 +72,15 @@ async def choose_todays(db):
     ).all()
 
     return todays
+
+
+def update_generators():
+    while True:
+        with SessionLocal() as db:
+            generators = db.query(QuestGenerator).all()
+
+            for generator in generators:
+                if generator.last_generate + generator.period > datetime.now():
+                    generator.generate_quest()
+
+        time.sleep(60)

@@ -5,7 +5,6 @@ const modal = document.getElementById('modal');
 // Управление модальным окном фильтров
 const openFiltersBtn = document.getElementById('openAdvancedFilters');
 const filtersModal = document.getElementById('filtersModal');
-const closeFiltersBtn = document.getElementById('closeFiltersModal');
 
 const fastSortForm = document.getElementById('fastSortForm');
 const fastSortFormFields = fastSortForm.querySelectorAll('input, select, textarea');
@@ -18,6 +17,11 @@ const postURL = fastSortForm.action;
 
 // Open modal with card details
 function openModal(id) {
+    let quest_card = document.getElementById(`quest_card_${id}`);
+    if (quest_card) {
+        quest_card.classList.remove("new");
+    }
+
     fetch(`/quest/${id}`)
         .then(res => res.text())
         .then(html => {
@@ -26,21 +30,6 @@ function openModal(id) {
 
     modal.style.display = 'flex';
 }
-
-// Close modal when clicking outside
-modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-        modal.style.display = 'none';
-    }
-});
-
-openFiltersBtn.addEventListener('click', () => {
-    filtersModal.style.display = 'flex';
-});
-
-closeFiltersBtn.addEventListener('click', () => {
-    filtersModal.style.display = 'none';
-});
 
 // Общая функция для отправки фильтров
 async function applyFilters() {
@@ -81,8 +70,25 @@ fastSortFormFields.forEach(field => {
 document.querySelectorAll('#filtersModal select, #filtersModal input[type="text"]').forEach(el => {
     el.addEventListener('change', () => {
         applyFilters();
-        filtersModal.style.display = 'none';
     });
+});
+
+// Close modal when clicking outside
+modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+        modal.style.display = 'none';
+    }
+});
+
+openFiltersBtn.addEventListener('click', () => {
+    filtersModal.style.display = 'flex';
+});
+
+filtersModal.addEventListener('click', (e) => {
+    if (e.target === filtersModal) {
+        applyFilters()
+        filtersModal.style.display = 'none';
+    }
 });
 
 // Инициализация при загрузке

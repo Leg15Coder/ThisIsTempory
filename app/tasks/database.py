@@ -4,7 +4,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy import create_engine, Boolean, Float, ForeignKey
 from sqlalchemy import Column, Integer, String, DateTime, Enum, Text, Table
-import enum
+import enum, os
 from dotenv import load_dotenv
 
 load_dotenv()

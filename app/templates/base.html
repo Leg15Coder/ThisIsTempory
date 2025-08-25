@@ -33,11 +33,11 @@
 
     <aside class="sidebar" id="sidebar">
         <ul class="menu">
-            <li class="menu-item"><a href="/create" class="menu-link">Создать</a></li>
-            <li class="menu-item"><a href="/" class="menu-link">Квесты</a></li>
-            <li class="menu-item"><a href="/today" class="menu-link">На сегодня</a></li>
-            <!-- <li class="menu-item"><a href="/matrix" class="menu-link">Распределение</a></li> -->
-            <li class="menu-item"><a href="/archive" class="menu-link">История</a></li>
+            <li class="menu-item"><a href="{{ base_url }}/create" class="menu-link">Создать</a></li>
+            <li class="menu-item"><a href="{{ base_url }}" class="menu-link">Квесты</a></li>
+            <li class="menu-item"><a href="{{ base_url }}/today" class="menu-link">На сегодня</a></li>
+            <!-- <li class="menu-item"><a href="{{ base_url }}/matrix" class="menu-link">Распределение</a></li> -->
+            <li class="menu-item"><a href="{{ base_url }}/archive" class="menu-link">История</a></li>
         </ul>
     </aside>
 
@@ -51,7 +51,7 @@
         <div>© 2025</div>
         <div class="footer-links">
             <a href="https://t.me/dimka_ryaz" class="footer-link">Контакты</a>
-            <a href="/help" class="footer-link">Помощь</a>
+            <a href="{{ base_url }}/help" class="footer-link">Помощь</a>
         </div>
     </footer>
 </body>

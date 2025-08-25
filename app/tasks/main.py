@@ -9,7 +9,8 @@ from app.tasks.utils import rarity_class
 from app.tasks.controller import flex_quest_filter, choose_todays, update_generators
 from app.tasks.database import QuestStatus, QuestRarity, Quest, get_db, CheckboxSubtask, NumericSubtask
 
-router = APIRouter(prefix="/quest-app")
+BASE_URL = '/quest-app'
+router = APIRouter(prefix=BASE_URL)
 generators_thread = Thread(target=update_generators, daemon=True)
 
 
@@ -22,7 +23,8 @@ async def read_quests(request: Request):
             "quests": quests,
             "post_url": "/filter-quests",
             "get_class": rarity_class,
-            "main_text": "Активные квесты"
+            "main_text": "Активные квесты",
+            "base_url": BASE_URL,
         })
 
 
@@ -30,7 +32,8 @@ async def read_quests(request: Request):
 async def read_quests(request: Request):
     return templates.TemplateResponse("help.html", {
         "request": request,
-        "now": datetime.now
+        "now": datetime.now,
+        "base_url": BASE_URL,
     })
 
 
@@ -43,6 +46,7 @@ async def read_quests(request: Request, quest_id: int):
         return templates.TemplateResponse("quest.html", {
             "request": request,
             "quest": quest,
+            "base_url": BASE_URL,
             "get_class": rarity_class
         })
 
@@ -55,6 +59,7 @@ async def create_quest_form(request: Request):
         return templates.TemplateResponse("create.html", {
             "request": request,
             "now": datetime.now,
+            "base_url": BASE_URL,
             "available_quests": available_quests
         })
 
@@ -143,6 +148,7 @@ async def show_today(request: Request):
             "request": request,
             "quests": quests,
             "quests_for_approve": todays,
+            "base_url": BASE_URL,
             "get_class": rarity_class
         })
 
@@ -173,7 +179,8 @@ async def archive(request: Request):
             "quests": quests,
             "get_class": rarity_class,
             "post_url": "/archive/filter-quests",
-            "main_text": "Завершённые квесты"
+            "main_text": "Завершённые квесты",
+            "base_url": BASE_URL,
         })
 
 

@@ -2,7 +2,7 @@ const modal = document.getElementById('modal');
 
 // Open modal with card details
 function openModal(id) {
-    fetch(`/quest/${id}`)
+    fetch(`/quest-app/quest/${id}`)
         .then(res => res.text())
         .then(html => {
             modal.innerHTML = html;

@@ -1,37 +1,11 @@
 from datetime import datetime, timedelta as dl
 
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy.dialects.postgresql import ENUM
-from sqlalchemy import create_engine, Boolean, Float, ForeignKey
+from sqlalchemy import Boolean, Float, ForeignKey
 from sqlalchemy import Column, Integer, String, DateTime, Enum, Text, Table
-import enum, os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./quests.db"
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from app.core.database import Base
+import enum
 
 
 class QuestRarity(str, enum.Enum):
@@ -229,6 +203,3 @@ class QuestGenerator(Base):
             if db:
                 db.add(new_quest)
                 db.commit()
-
-
-Base.metadata.create_all(bind=engine)

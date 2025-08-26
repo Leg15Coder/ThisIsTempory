@@ -2,7 +2,9 @@ import time
 from datetime import datetime, timedelta as td
 
 from sqlalchemy import or_, case
-from app.tasks.database import QuestStatus, QuestRarity, Quest, SessionLocal, QuestGenerator
+
+from app.core.database import get_db
+from app.tasks.database import QuestStatus, QuestRarity, Quest, QuestGenerator
 
 
 async def flex_quest_filter(quests, sort_type: str, find: str):
@@ -76,7 +78,7 @@ async def choose_todays(db):
 
 def update_generators():
     while True:
-        with SessionLocal() as db:
+        with next(get_db()) as db:
             generators = db.query(QuestGenerator).all()
 
             for generator in generators:

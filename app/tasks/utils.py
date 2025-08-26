@@ -1,5 +1,6 @@
 from functools import wraps
-from app.tasks.database import SessionLocal
+
+from app.core.database import get_db
 
 
 def rarity_class(rarity: str) -> str:
@@ -19,7 +20,7 @@ def rarity_class(rarity: str) -> str:
 def Sessional(func):
     @wraps(func)
     async def async_wrapper(*args, **kwargs):
-        db = SessionLocal()
+        db = next(get_db())
         try:
             kwargs["db"] = db
             result = await func(*args, **kwargs)

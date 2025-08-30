@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">
+                        {% if success %}Email подтвержден{% else %}Ошибка подтверждения{% endif %}
+                    </h3>
+                </div>
+                <div class="card-body text-center">
+                    {% if success %}
+                    <div class="alert alert-success" role="alert">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h4>Успешно!</h4>
+                        <p>{{ message }}</p>
+                    </div>
+                    <p>Теперь ваш аккаунт ожидает одобрения администратора.</p>
+                    <p>Вы получите email уведомление, когда аккаунт будет активирован.</p>
+                    {% else %}
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+                        <h4>Ошибка!</h4>
+                        <p>{{ message }}</p>
+                    </div>
+                    <p>Пожалуйста, свяжитесь с администратором для помощи.</p>
+                    {% endif %}
+
+                    <a href="/" class="btn btn-primary mt-3">На главную</a>
+                    {% if not success %}
+                    <a href="/accounts/register" class="btn btn-outline-primary mt-3 ms-2">Попробовать снова</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

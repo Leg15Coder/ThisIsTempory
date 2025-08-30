@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Регистрация успешна!</h3>
+                </div>
+                <div class="card-body text-center">
+                    <div class="alert alert-success" role="alert">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h4>{{ message }}</h4>
+                    </div>
+                    
+                    <p>Мы отправили письмо с подтверждением на вашу электронную почту.</p>
+                    <p>Пожалуйста, проверьте вашу почту и перейдите по ссылке для подтверждения email.</p>
+                    
+                    <div class="alert alert-info mt-3">
+                        <small>
+                            <strong>Важно:</strong> После подтверждения email ваш аккаунт будет ожидать одобрения администратора.
+                            Вы получите уведомление по почте, когда аккаунт будет активирован.
+                        </small>
+                    </div>
+
+                    <a href="/" class="btn btn-primary mt-3">На главную</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

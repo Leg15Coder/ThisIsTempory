@@ -9,7 +9,7 @@ from app.tasks.utils import rarity_class
 from app.tasks.controller import flex_quest_filter, choose_todays, update_generators
 from app.tasks.database import QuestStatus, QuestRarity, Quest, CheckboxSubtask, NumericSubtask
 from app.core.database import get_db
-from app.core.security import auth_required
+from app.accounts.utils import auth_required
 
 router = APIRouter(prefix="/quest-app", dependencies=[Depends(auth_required)])
 generators_thread = Thread(target=update_generators, daemon=True)

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Заявки на одобрение</h2>
+        <a href="/admin/users" class="btn btn-outline-secondary">Все пользователи</a>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if request.query_params.get('success') %}
+    <div class="alert alert-success" role="alert">
+        Пользователь успешно одобрен!
+    </div>
+    {% endif %}
+
+    {% if not approvals %}
+    <div class="alert alert-info" role="alert">
+        Нет pending заявок на одобрение.
+    </div>
+    {% else %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя пользователя</th>
+                    <th>Email</th>
+                    <th>Полное имя</th>
+                    <th>Дата регистрации</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for approval in approvals %}
+                <tr>
+                    <td>{{ approval.user.id }}</td>
+                    <td>{{ approval.user.username }}</td>
+                    <td>{{ approval.user.email }}</td>
+                    <td>{{ approval.user.full_name or 'Не указано' }}</td>
+                    <td>{{ approval.user.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>
+                        <form method="post" action="/accounts/admin/approve/{{ approval.user.id }}" class="d-inline">
+                            <button type="submit" class="btn btn-success btn-sm">Одобрить</button>
+                        </form>
+                        <a href="/accounts/admin/users/{{ approval.user.id }}" class="btn btn-info btn-sm ms-1">Просмотр</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

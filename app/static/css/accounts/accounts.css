@@ -1,0 +1,236 @@
+:root {
+  --bg1: #05070e;
+  --bg2: #0a0f1f;
+  --neon-cyan: #00fff7;
+  --neon-blue: #4da3ff;
+  --neon-pink: #ff39ff;
+  --text: #e6f7ff;
+  --muted: #9bb3c7;
+  --card-bg: rgba(12, 16, 32, 0.72);
+  --border: rgba(0, 255, 247, 0.28);
+  --glow: rgba(0, 255, 247, 0.6);
+  --radius: 18px;
+  --hex-size: 56px;           /* base hex size */
+  --hex-h: 48.5px;            /* height of one hex row (≈ size * 0.866) */
+  --scan-speed: 38s;          /* grid drift speed */
+}
+
+/* ===== Base layout ===== */
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--text);
+  background: radial-gradient(1200px 700px at 10% -10%, var(--bg2), transparent 60%),
+              radial-gradient(1200px 700px at 110% 10%, #0b0f24, transparent 60%),
+              linear-gradient(180deg, var(--bg1), #02040a 65%, #010208);
+  overflow-x: hidden;
+}
+
+/* ======= HEX BACKGROUND (3 layers) ======= */
+.hex-scene {                 /* container for background layers */
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Layer 1: subtle moving hex grid (SVG as data-URL) */
+.hex-grid {
+  position: absolute; inset: 0;
+  opacity: 0.32;
+  background-size: var(--hex-size) var(--hex-h);
+  background-position: 0 0;
+  animation: grid-drift var(--scan-speed) linear infinite;
+  filter: drop-shadow(0 0 0.6px rgba(0,255,255,0.35));
+  /* SVG hexagon outline tile */
+  background-image: url("data:image/svg+xml;utf8,\
+    <svg xmlns='http://www.w3.org/2000/svg' width='56' height='48.5' viewBox='0 0 56 48.5'>\
+      <defs>\
+        <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>\
+          <stop offset='0%' stop-color='rgba(0,255,255,0.28)'/>\
+          <stop offset='100%' stop-color='rgba(77,163,255,0.22)'/>\
+        </linearGradient>\
+      </defs>\
+      <g fill='none' stroke='url(%23g)' stroke-width='1'>\
+        <polygon points='28,0 56,14.25 56,34.25 28,48.5 0,34.25 0,14.25'/>\
+      </g>\
+    </svg>");
+}
+
+/* Layer 2: shimmering neon sweep masked to the hex grid lines */
+.hex-sheen {
+  position: absolute; inset: -20% -10%;
+  mix-blend-mode: screen;
+  opacity: 0.65;
+  background: radial-gradient(35% 50% at 20% 30%, rgba(0,255,255,0.35), transparent 60%),
+              radial-gradient(30% 45% at 80% 40%, rgba(77,163,255,0.35), transparent 60%),
+              radial-gradient(40% 40% at 50% 80%, rgba(255,57,255,0.28), transparent 60%);
+  filter: blur(30px) saturate(120%);
+  animation: sheen-shift 22s ease-in-out infinite alternate;
+}
+
+/* Layer 3: soft moving particles to add depth */
+.hex-particles { position: absolute; inset: 0; overflow: hidden; }
+.spark {
+  position: absolute; width: 2px; height: 2px; border-radius: 50%;
+  background: rgba(255,255,255,0.7); filter: drop-shadow(0 0 6px rgba(0,255,255,0.8));
+  animation: float 18s linear infinite;
+}
+
+@keyframes grid-drift {
+  0%   { background-position: 0 0; }
+  100% { background-position: calc(var(--hex-size) * -1) calc(var(--hex-h) * -1); }
+}
+@keyframes sheen-shift {
+  0% { transform: translate3d(-4%, -3%, 0) scale(1.02); }
+  100% { transform: translate3d(4%, 3%, 0) scale(1.05); }
+}
+@keyframes float {
+  0%   { transform: translateY(0) translateX(0); opacity: 0.9; }
+  70%  { opacity: 0.6; }
+  100% { transform: translateY(-120vh) translateX(30vw); opacity: 0; }
+}
+
+/* ===== Content wrapper (kept above bg) ===== */
+.stage { position: relative; z-index: 2; display: grid; place-items: center; min-height: 100vh; padding: 5vmin 3vmin; }
+
+/* ===== Card (glass + neon) ===== */
+.card {
+  width: min(92vw, 460px);
+  background: linear-gradient(180deg, rgba(11,18,36,0.82), rgba(9,14,28,0.72));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 26px 26px;
+  box-shadow: 0 0 0 1px rgba(0, 255, 247, 0.08) inset,
+              0 10px 40px -10px rgba(0, 255, 247, 0.35),
+              0 16px 60px -24px rgba(77, 163, 255, 0.35);
+  backdrop-filter: blur(10px) saturate(120%);
+  transform: translateZ(0);
+  animation: card-in 900ms cubic-bezier(.2,.7,.2,1);
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.card h3 {
+  margin: 0 0 14px 0;
+  text-align: center;
+  letter-spacing: .08em;
+  color: var(--neon-cyan);
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-shadow: 0 0 10px rgba(0,255,255,.6);
+}
+.subtle { text-align: center; color: var(--muted); margin: 0 0 12px 0; font-size: .92rem; }
+
+.form-group { margin: 12px 0 14px; }
+label { display: block; margin: 0 0 6px; color: var(--muted); font-size: .9rem; }
+
+.field {
+  width: calc(100% - 24px);
+  padding: 12px 12px 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 255, 247, 0.28);
+  background: rgba(5, 10, 22, 0.8);
+  color: var(--text);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color .25s ease, box-shadow .25s ease, transform .12s ease;
+  box-shadow: 0 0 0 0 rgba(0,255,247,0);
+}
+.field:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 0 3px rgba(0,255,247,.18), 0 0 18px rgba(0,255,247,.4);
+  transform: translateY(-1px);
+}
+
+.btn {
+  width: 100%;
+  appearance: none; border: none; cursor: pointer;
+  margin-top: 6px; padding: 13px 14px; border-radius: 12px;
+  background: linear-gradient(90deg, var(--neon-blue), var(--neon-cyan) 55%, var(--neon-pink));
+  color: #05121e; font-weight: 800; letter-spacing: .06em; font-size: 1rem;
+  box-shadow: 0 10px 26px -8px rgba(0,255,247,.45), 0 0 0 1px rgba(0,255,247,.15) inset;
+  transition: transform .12s ease, box-shadow .25s ease, filter .25s ease;
+}
+.btn:hover { transform: translateY(-1px); filter: brightness(1.05) saturate(1.1); }
+.btn:active { transform: translateY(0); filter: brightness(.98); }
+
+.alert {
+  margin: 8px 0 14px; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid rgba(255,99,99,.35);
+  background: linear-gradient(180deg, rgba(60,0,6,.45), rgba(50,0,8,.35));
+  color: #ffb9b9; text-align: center; box-shadow: 0 10px 24px -14px rgba(255,0,0,.35);
+}
+
+.extra { text-align: center; margin-top: 12px; }
+.extra a { color: var(--neon-cyan); text-decoration: none; }
+.extra a:hover { text-shadow: 0 0 10px var(--neon-cyan); }
+
+/* Password strength + match indicator */
+.hint { font-size: .84rem; color: var(--muted); margin-top: 6px; min-height: 1.1em; }
+.hint.ok { color: #9dffc9; text-shadow: 0 0 8px rgba(0,255,170,.35); }
+.hint.bad { color: #ff9d9d; text-shadow: 0 0 8px rgba(255,70,70,.35); }
+
+/* Small helper: reduce motion prefers */
+@media (prefers-reduced-motion: reduce) {
+  .hex-grid, .hex-sheen, .spark { animation: none !important; }
+}
+
+/* Secondary button */
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 0.6rem 1.2rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #868e96, #343a40);
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px rgba(108, 117, 125, 0.6);
+}
+
+/* Info button */
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8, #0dcaf0);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 0.6rem 1.2rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.btn-info:hover {
+    background: linear-gradient(135deg, #20c997, #0d6efd);
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px rgba(13, 202, 240, 0.6);
+}
+
+/* Success button */
+.btn-success {
+    background: linear-gradient(135deg, #198754, #28a745);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 0.6rem 1.2rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.btn-success:hover {
+    background: linear-gradient(135deg, #218838, #1e7e34);
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.6);
+}
+
+/* Small text */
+.small {
+    font-size: 0.875rem;
+    color: #adb5bd;
+}

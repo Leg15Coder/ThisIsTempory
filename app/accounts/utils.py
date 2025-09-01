@@ -12,7 +12,6 @@ from fastapi import HTTPException, status
 
 
 def create_user(db: Session, username: str, email: str, password: str, full_name: str = None) -> tuple[User, str]:
-    print(get_user_by_login_or_email(username), get_user_by_login_or_email(email))
     if get_user_by_login_or_email(email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

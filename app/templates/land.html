@@ -1,10 +1,259 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8">
+  <title>Обо мне</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body, html {
+      font-family: 'Segoe UI', sans-serif;
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
+    section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: white;
+      padding: 3rem;
+      transition: background 1s ease;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      font-size: 1.2rem;
+      max-width: 800px;
+    }
+
+
+    #intro {
+      background: url({{ url_for('static', path='img/landing/space-background.jpg') }}) center/cover fixed;
+    }
+    #intro h1 {
+      font-size: 4rem;
+      text-shadow: 0 0 15px #0ff;
+    }
+
+    #experience {
+      background: url({{ url_for('static', path='img/landing/hi-tech-background.jpg') }}) center/cover fixed;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      padding: 4rem;
+    }
+    .card {
+        width: min(300px, 90%);
+        height: 200px;
+        perspective: 1000px;
+        margin: 20px auto;
+    }
+
+    .card-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.8s;
+        transform-style: preserve-3d;
+    }
+
+    .card:hover .card-inner {
+        transform: rotateY(180deg);
+    }
+
+    .card-front,
+    .card-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 15px;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .card-front {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .card-back {
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        transform: rotateY(180deg);
+    }
+
+    #education {
+      background: url('https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1400&q=80') center/cover fixed;
+      position: relative;
+    }
+    #education::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+    }
+    #education .content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+    }
+    .book {
+      background: #fdf6e3;
+      color: #333;
+      border-radius: 8px;
+      padding: 2rem;
+      width: 300px;
+      box-shadow: 2px 2px 12px rgba(0,0,0,0.5);
+      text-align: left;
+    }
+
+    #hobbies {
+      background: linear-gradient(to top, #001a00, #003300);
+      background-image: url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1400&q=80');
+      background-size: cover;
+      background-attachment: fixed;
+      position: relative;
+    }
+    #hobbies::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,30,0,0.7);
+    }
+    #hobbies .content {
+      position: relative;
+      z-index: 1;
+    }
+    #hobbies ul {
+      padding-left: 30%;
+      padding-top: 2rem;
+    }
+    #hobbies li {
+      text-align: left;
+    }
+
+    #future {
+      background: linear-gradient(135deg, #000428, #004e92);
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 1rem;
+      background: rgba(0,0,0,0.6);
+      padding: 0.25rem 0.5rem;
+      border-radius: 20px;
+      z-index: 10;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      transition: background 0.3s;
+    }
+    nav a:hover {
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+    }
+  </style>
 </head>
 <body>
-<h1>HELLO, WORLD!</h1>
+  <nav>
+    <a href="#intro">Интро</a>
+    <a href="#experience">Опыт</a>
+    <a href="#education">Образование</a>
+    <a href="#hobbies">Хобби</a>
+    <a href="#future">Будущее</a>
+    <a href="/accounts/login" style="color: Aquamarine;">Войти</a>
+  </nav>
+
+  <section id="intro">
+    <h1>Привет!</h1>
+    <p>Я Дмитрий Ряжских, и это мой личный сайт. Здесь ты узнаешь о моём пути, опыте, интересах и целях.</p>
+  </section>
+
+  <section id="experience">
+    <div class="card">
+        <div class="card-inner">
+            <div class="card-front">
+                <h3>Backend-разработка</h3>
+            </div>
+            <div class="card-back">
+                <p>FastAPI, Flask, aiogram, Java Spring</p>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-inner">
+            <div class="card-front">
+                <h3>Data Engineering</h3>
+            </div>
+            <div class="card-back">
+                <p>Анализ данных, Kafka, паттерн ORM, работа с не реляционными БД</p>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-inner">
+            <div class="card-front">
+                <h3>Фундаментальные технологии</h3>
+            </div>
+            <div class="card-back">
+                <p>Знаю базовый синтаксис python и java, на продвинутом уровне знаю алгоритмы и структуры данных</p>
+            </div>
+        </div>
+    </div>
+  </section>
+
+  <section id="education">
+    <div class="content">
+      <div class="book">
+        <h3>Школа</h3>
+        <p>Закончил <a href="https://school33.edu.yar.ru/">ГОУ ЯО СШ №33 им. К. Маркса с углублённым изучением математики</a> с золотой медалью с 302 баллами ЕГЭ в сумме с ИД.</p>
+      </div>
+      <div class="book">
+        <h3>Университет</h3>
+          <p>Учусь в <a href="https://hsse.mipt.ru">ВШПИ</a> <a href="https://www.mipt.ru">МФТИ</a>. Закончил первый курс со средним баллом 9.1</p>
+      </div>
+      <div class="book">
+        <h3>Самообразование</h3>
+        <p>Читаю книги, прохожу онлайн-курсы и реализовываю <!-- <a href="/projects"> -->свои проекты<!-- </a> -->.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="hobbies">
+    <div class="content">
+      <h1>Хобби</h1>
+      <p>Люблю свободное время заниматься саморазвитием и общаться с друзьями. Из увлечений могу выделить:</p>
+        <ul>
+          <li>Занятия в тренажёрном зале</li>
+          <li>Чтение или просмотр фэнтези</li>
+          <li>Играть в компьютерные стратегии</li>
+        </ul>
+    </div>
+  </section>
+
+  <section id="future">
+    <h1>🚀 Планы на будущее</h1>
+    <p>«Лучший способ предсказать будущее — это изобрести его» — Теодор Хук.</p>
+  </section>
 </body>
 </html>

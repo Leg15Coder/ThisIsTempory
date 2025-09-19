@@ -10,6 +10,7 @@ router = APIRouter(prefix="/physics/M1")
 
 
 class TrajectoryRequest(BaseModel):
+    mass: float = 1.
     angle: float
     velocity: float
     gravity: float = 9.81
@@ -41,11 +42,12 @@ class ErrorResponse(BaseModel):
 
 class ProjectileMotion:
     def __init__(self, angle: float, velocity: float, gravity: float,
-                 viscous_friction: float, drag_coefficient: float):
+                 viscous_friction: float, drag_coefficient: float, mass: float):
         self.MAX_OPERATIONS = 10 ** 3
         self.angle = math.radians(angle)  # преобразуем в радианы
         self.v0 = velocity
         self.g = gravity
+        self.mass = mass
         self.k_viscous = viscous_friction  # коэффициент вязкого трения
         self.k_drag = drag_coefficient  # коэффициент лобового сопротивления
 
@@ -80,9 +82,9 @@ class ProjectileMotion:
             drag_force_y = -self.k_drag * current_v * current_vy
             viscous_force_y = -self.k_viscous * current_vy
 
-            # Ускорения (F = ma, для удобства предполагаем массу = 1)
-            ax = drag_force_x + viscous_force_x
-            ay = -self.g + drag_force_y + viscous_force_y
+            # Ускорения (F = ma)
+            ax = (drag_force_x + viscous_force_x) / self.mass
+            ay = -self.g + (drag_force_y + viscous_force_y) / self.mass
 
             # Новые скорости и координаты
             new_vx = current_vx + ax * dt
@@ -115,6 +117,8 @@ async def render_m1(request: Request):
 async def calculate_trajectory(request: TrajectoryRequest):
     try:
         # Валидация входных данных
+        if request.mass <= 0:
+            raise HTTPException(status_code=400, detail="Масса должна быть положительна")
         if not (0 <= request.angle <= 90):
             raise HTTPException(status_code=400, detail="Угол должен быть между 0 и 90 градусами")
         if request.velocity <= 0:
@@ -128,6 +132,7 @@ async def calculate_trajectory(request: TrajectoryRequest):
 
         # Создаем модель
         projectile = ProjectileMotion(
+            mass=request.mass,
             angle=request.angle,
             velocity=request.velocity,
             gravity=request.gravity,

@@ -103,11 +103,11 @@ class ProjectileAnimation {
         const maxY = Math.max(...this.trajectoryData.map(p => p.y));
 
         const scaleX = (width - 100) / (maxX || 1);
-        const scaleY = (height - 75) / (maxY || 1);
+        const scaleY = (height - 50) / (maxY || 1);
 
         return {
             x: 50 + point.x * scaleX,
-            y: height - 50 - point.y * scaleY
+            y: height - point.y * scaleY
         };
     }
 
@@ -168,6 +168,10 @@ class ProjectileAnimation {
                 Math.pow((this.trajectoryData[this.currentPointIndex].y - this.trajectoryData[Math.max(0, this.currentPointIndex-1)].y) / 0.01, 2)
             );
 
+            if (this.trajectoryData[this.currentPointIndex].y >= this.trajectoryData[Math.max(0, this.currentPointIndex-1)].y) {
+                document.getElementById('height-time').textContent = time.toFixed(2);;
+            }
+
             document.getElementById('current-time').textContent = time.toFixed(2);
             document.getElementById('current-speed').textContent = speed.toFixed(2);
         }
@@ -176,6 +180,7 @@ class ProjectileAnimation {
     animate() {
         if (this.currentPointIndex >= this.trajectoryData.length) {
             this.stopAnimation();
+            document.getElementById('current-speed').textContent = 0;
             return;
         }
 
@@ -211,6 +216,7 @@ class ProjectileAnimation {
         this.drawStaticElements();
 
         document.getElementById('current-time').textContent = '0.00';
+        document.getElementById('height-time').textContent = '0.00';
         document.getElementById('current-speed').textContent = '-';
     }
 
@@ -230,6 +236,7 @@ window.addEventListener('load', () => {
 
 async function calculateTrajectory() {
     const data = {
+        mass: parseFloat(document.getElementById('mass').value),
         angle: parseFloat(document.getElementById('angle').value),
         velocity: parseFloat(document.getElementById('velocity').value),
         gravity: parseFloat(document.getElementById('gravity').value),
@@ -261,7 +268,7 @@ async function calculateTrajectory() {
             throw new Error(result.error || 'Неизвестная ошибка');
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Ошибка:', error);
         alert('Ошибка: ' + error.message);
     }
 }

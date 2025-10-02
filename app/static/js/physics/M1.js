@@ -16,6 +16,9 @@ class ProjectileAnimation {
         this.animationId = null;
         this.trajectoryData = [];
         this.currentPointIndex = 0;
+        this.lastPointIndex = 0;
+        this.time = 0;
+        this.step = 0.01;
         this.animationSpeed = 5;
         this.isAnimating = false;
         this.stats = {};
@@ -99,16 +102,27 @@ class ProjectileAnimation {
         const width = this.canvas.width;
         const height = this.canvas.height - 50;
 
-        const maxX = Math.max(...this.trajectoryData.map(p => p.x));
-        const maxY = Math.max(...this.trajectoryData.map(p => p.y));
+        // Для случая вертикального броска (90 градусов) используем только масштабирование по Y
+        if (this.stats.is_vertical_throw) {
+            const maxY = Math.max(...this.trajectoryData.map(p => p.y));
+            const scaleY = (height - 100) / (maxY || 1);
 
-        const scaleX = (width - 100) / (maxX || 1);
-        const scaleY = (height - 50) / (maxY || 1);
+            return {
+                x: width / 2, // Центрируем по горизонтали
+                y: height - point.y * scaleY
+            };
+        } else {
+            const maxX = Math.max(...this.trajectoryData.map(p => p.x));
+            const maxY = Math.max(...this.trajectoryData.map(p => p.y));
 
-        return {
-            x: 50 + point.x * scaleX,
-            y: height - point.y * scaleY
-        };
+            const scaleX = (width - 100) / (maxX || 1);
+            const scaleY = (height - 50) / (maxY || 1);
+
+            return {
+                x: 50 + point.x * scaleX,
+                y: height - point.y * scaleY
+            };
+        }
     }
 
     drawTrajectory() {
@@ -162,18 +176,18 @@ class ProjectileAnimation {
     updateStats() {
         if (this.currentPointIndex < this.trajectoryData.length) {
             const currentPoint = this.trajectoryData[this.currentPointIndex];
-            const time = (this.currentPointIndex / this.trajectoryData.length) * this.stats.flight_time;
+
             const speed = Math.sqrt(
-                Math.pow((this.trajectoryData[this.currentPointIndex].x - this.trajectoryData[Math.max(0, this.currentPointIndex-1)].x) / 0.01, 2) +
-                Math.pow((this.trajectoryData[this.currentPointIndex].y - this.trajectoryData[Math.max(0, this.currentPointIndex-1)].y) / 0.01, 2)
+                Math.pow((currentPoint.x - this.trajectoryData[Math.max(0, this.currentPointIndex-1)].x) / currentPoint.dt, 2) +
+                Math.pow((currentPoint.y - this.trajectoryData[Math.max(0, this.currentPointIndex-1)].y) / currentPoint.dt, 2)
             );
 
             if (this.trajectoryData[this.currentPointIndex].y >= this.trajectoryData[Math.max(0, this.currentPointIndex-1)].y) {
-                document.getElementById('height-time').textContent = time.toFixed(2);;
+                document.getElementById('height-time').textContent = this.time.toFixed(3);
             }
 
-            document.getElementById('current-time').textContent = time.toFixed(2);
-            document.getElementById('current-speed').textContent = speed.toFixed(2);
+            document.getElementById('current-time').textContent = this.time.toFixed(3);
+            document.getElementById('current-speed').textContent = speed.toFixed(3);
         }
     }
 
@@ -189,7 +203,25 @@ class ProjectileAnimation {
         this.drawProjectile(this.trajectoryData[this.currentPointIndex]);
         this.updateStats();
 
-        this.currentPointIndex += this.animationSpeed;
+        if (this.currentPointIndex === this.trajectoryData.length - 1) {
+            this.stopAnimation();
+            document.getElementById('current-speed').textContent = 0;
+            return;
+        }
+
+        this.lastPointIndex = this.currentPointIndex;
+        const time = this.time;
+        while (this.time < time + this.step * this.animationSpeed) {
+            this.currentPointIndex++;
+
+            if (this.currentPointIndex >= this.trajectoryData.length) {
+                this.currentPointIndex--;
+                break;
+            }
+
+            this.time += this.trajectoryData[this.currentPointIndex].dt;
+        }
+
         this.animationId = requestAnimationFrame(() => this.animate());
     }
 
@@ -197,7 +229,9 @@ class ProjectileAnimation {
         if (this.trajectoryData.length === 0) return;
 
         this.isAnimating = true;
+        this.time = 0;
         this.currentPointIndex = 0;
+        this.lastPointIndex = 0;
         this.animate();
     }
 
@@ -213,6 +247,8 @@ class ProjectileAnimation {
         this.stopAnimation();
         this.trajectoryData = [];
         this.currentPointIndex = 0;
+        this.lastPointIndex = 0;
+        this.time = 0;
         this.drawStaticElements();
 
         document.getElementById('current-time').textContent = '0.00';
@@ -223,6 +259,8 @@ class ProjectileAnimation {
     setTrajectoryData(data, stats) {
         this.trajectoryData = data;
         this.stats = stats;
+        this.step = stats.flight_time / 666;
+        this.stats.is_vertical_throw = Math.abs(parseFloat(document.getElementById('angle').value) - 90) < 0.00001;
         this.drawStaticElements();
         this.drawTrajectory();
     }
@@ -301,6 +339,26 @@ function updateChart(trajectoryData) {
         trajectoryChart.destroy();
     }
 
+    is_vertical_throw = Math.abs(parseFloat(document.getElementById('angle').value) - 90) < 0.00001;
+    const xAxisConfig = is_vertical_throw ? {
+        type: 'linear',
+        position: 'bottom',
+        title: {
+            display: true,
+            text: 'Расстояние (м)'
+        },
+        min: -1,
+        max: 1
+    } : {
+        type: 'linear',
+        position: 'bottom',
+        title: {
+            display: true,
+            text: 'Расстояние (м)'
+        }
+    };
+
+
     trajectoryChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -317,14 +375,7 @@ function updateChart(trajectoryData) {
         options: {
             responsive: true,
             scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    title: {
-                        display: true,
-                        text: 'Расстояние (м)'
-                    }
-                },
+                x: xAxisConfig,
                 y: {
                     title: {
                         display: true,
@@ -344,7 +395,7 @@ function updateChart(trajectoryData) {
 }
 
 function updateStats(stats) {
-    document.getElementById('range').textContent = stats.range.toFixed(2);
-    document.getElementById('max-height').textContent = stats.max_height.toFixed(2);
-    document.getElementById('flight-time').textContent = stats.flight_time.toFixed(2);
+    document.getElementById('range').textContent = stats.range.toFixed(3);
+    document.getElementById('max-height').textContent = stats.max_height.toFixed(3);
+    document.getElementById('flight-time').textContent = stats.flight_time.toFixed(3);
 }

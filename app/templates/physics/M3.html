@@ -16,42 +16,25 @@
                 <h2>Параметры миссии</h2>
 
                 <div class="input-section">
-                    <h3>Запуск с Земли</h3>
-                    <div class="input-group">
-                        <label for="initial_mass">Начальная масса (кг):</label>
-                        <input type="number" id="initial_mass" value="1000000" step="1000">
-                    </div>
-                    <div class="input-group">
-                        <label for="thrust">Тяга двигателей (Н):</label>
-                        <input type="number" id="thrust" value="20000000" step="100000">
-                    </div>
-                    <div class="input-group">
-                        <label for="specific_impulse">Удельный импульс (с):</label>
-                        <input type="number" id="specific_impulse" value="350" step="10">
-                    </div>
-                </div>
-
-                <div class="input-section">
-                    <h3>Перелет к Марсу</h3>
                     <div class="input-group">
                         <label for="departure_date">Дата старта:</label>
                         <input type="date" id="departure_date" value="2024-01-01">
                     </div>
                     <div class="input-group">
-                        <label for="transfer_time">Время перелета (дней):</label>
-                        <input type="number" id="transfer_time" value="200" step="10">
+                        <label for="initial_mass">Начальная масса (кг):</label>
+                        <input type="number" id="initial_mass" value="1000000" step="1000">
                     </div>
-                </div>
-
-                <div class="input-section">
-                    <h3>Посадка на Марс</h3>
                     <div class="input-group">
-                        <label for="landing_mass">Масса при посадке (кг):</label>
+                        <label for="landing_mass">Масса полезного груза (кг):</label>
                         <input type="number" id="landing_mass" value="10000" step="100">
                     </div>
                     <div class="input-group">
-                        <label for="landing_thrust">Тяга посадочных двигателей (Н):</label>
-                        <input type="number" id="landing_thrust" value="500000" step="10000">
+                        <label for="gases_velocity">Скорость вылета газов (м/с):</label>
+                        <input type="number" id="gases_velocity" value="20000000" step="100000">
+                    </div>
+                    <div class="input-group">
+                        <label for="velocity">Скорость взлёта относительно Земли (м/с):</label>
+                        <input type="number" id="velocity" value="350" step="10">
                     </div>
                 </div>
 

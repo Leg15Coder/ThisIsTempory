@@ -10,26 +10,38 @@ class MarsMissionAnimation {
         this.animationId = null;
         this.trajectory = [];
         this.currentIndex = 0;
-        this.animationSpeed = 10;
+        this.baseAnimationSpeed = 1;
+        this.phaseSpeedMultipliers = {
+            'launch': 0.1,     // Медленнее для взлета
+            'transfer': 1.0,   // Нормальная скорость для перелета
+            'landing': 0.1     // Медленнее для посадки
+        };
         this.isAnimating = false;
         this.stats = {};
         this.viewMode = 'solar';
         this.request = null;
+        this.stars = [];
+        this.planetaryData = {};
+        this.marsStartPos = [0, 0];
 
         this.setupEventListeners();
         this.resizeCanvas();
+        this.generateStars();
     }
 
     setupEventListeners() {
-        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('resize', () => {
+            this.resizeCanvas();
+            this.generateStars(); // Перегенерируем звезды при изменении размера
+        });
 
         const speedSlider = document.getElementById('animation-speed');
         if (speedSlider) {
             speedSlider.addEventListener('input', (e) => {
-                this.animationSpeed = parseInt(e.target.value);
+                this.baseAnimationSpeed = parseInt(e.target.value);
                 const speedValue = document.getElementById('speed-value');
                 if (speedValue) {
-                    speedValue.textContent = this.animationSpeed + 'x';
+                    speedValue.textContent = this.baseAnimationSpeed + 'x';
                 }
             });
         }
@@ -39,6 +51,21 @@ class MarsMissionAnimation {
             viewModeSelect.addEventListener('change', (e) => {
                 this.viewMode = e.target.value;
                 this.drawCurrentFrame();
+            });
+        }
+    }
+
+    generateStars() {
+        this.stars = [];
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        for (let i = 0; i < 200; i++) {
+            this.stars.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                size: Math.random() * 2,
+                brightness: Math.random() * 0.8 + 0.2
             });
         }
     }
@@ -72,7 +99,7 @@ class MarsMissionAnimation {
         this.drawStars();
 
         // Масштаб для солнечной системы
-        const scale = Math.min(width, height) / (3 * 1.524 * 1.496e11);
+        const scale = Math.min(width, height) / (2.22 * 1.524 * 1.496e11);
 
         // Центр системы
         const centerX = width / 2;
@@ -84,11 +111,11 @@ class MarsMissionAnimation {
         ctx.arc(centerX, centerY, 25, 0, Math.PI * 2);
         ctx.fill();
 
-        // Рисуем орбиты планет (эллипсы)
+        // Рисуем орбиты планет
         this.drawPlanetaryOrbits(centerX, centerY, scale);
 
         // Рисуем планеты в их текущих позициях
-        this.drawPlanets(centerX, centerY, scale);
+        this.drawPlanets(centerX, centerY, scale, point);
 
         // Корабль
         if (point) {
@@ -99,17 +126,16 @@ class MarsMissionAnimation {
             this.drawTrajectory(centerX, centerY, scale);
 
             // Рисуем корабль
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(shipX, shipY, 5, 0, Math.PI * 2);
-            ctx.fill();
+            this.drawSpacecraft(shipX, shipY, this.getSpacecraftAngle(point.phase));
+        }
+    }
 
-            // Подсветка корабля
-            ctx.strokeStyle = '#00ff00';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(shipX, shipY, 8, 0, Math.PI * 2);
-            ctx.stroke();
+    getSpacecraftAngle(phase) {
+        switch (phase) {
+            case 'launch': return 0;
+            case 'transfer': return 90;
+            case 'landing': return -90;
+            default: return 0;
         }
     }
 
@@ -118,87 +144,101 @@ class MarsMissionAnimation {
 
         const ctx = this.ctx;
 
-        // Орбита Земли (эллипс)
+        // Орбита Земли
         ctx.strokeStyle = 'rgba(0, 191, 255, 0.3)';
         ctx.lineWidth = 1;
-        this.drawEllipse(ctx, centerX, centerY,
-                        1.496e11 * scale,
-                        1.496e11 * scale,
-                        0);
-
-        // Орбита Марса (эллипс)
-        ctx.strokeStyle = 'rgba(255, 87, 51, 0.3)';
-        this.drawEllipse(ctx, centerX, centerY,
-                        1.524 * 1.496e11 * scale,
-                        1.524 * 1.496e11 * scale,
-                        1.85 * Math.PI/180);
-    }
-
-    drawEllipse(ctx, x, y, a, b, rotation) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rotation);
-        ctx.scale(a, b);
         ctx.beginPath();
-        ctx.arc(0, 0, 1, 0, Math.PI * 2);
-        ctx.restore();
+        ctx.arc(centerX, centerY, 1.0 * 1.496e11 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Орбита Марса
+        ctx.strokeStyle = 'rgba(255, 87, 51, 0.3)';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 1.524 * 1.496e11 * scale, 0, Math.PI * 2);
         ctx.stroke();
     }
 
-    drawPlanets(centerX, centerY, scale) {
-        if (!this.ctx || !this.planetaryData) return;
+    drawPlanets(centerX, centerY, scale, currentPoint) {
+        if (!this.ctx) return;
 
         const ctx = this.ctx;
-        const time = this.currentIndex / this.trajectory.length * this.stats.total_time / 86400;
+        const currentTime = currentPoint ? currentPoint.time : 0;
+
+        // Позиция Земли (упрощенно - на орбите)
+        const earthAngle = (currentTime / 86400) * (2 * Math.PI / 365.25) + Math.PI / 2;
+        const earthX = centerX + Math.cos(earthAngle) * 1.0 * 1.496e11 * scale;
+        const earthY = centerY + Math.sin(earthAngle) * 1.0 * 1.496e11 * scale;
 
         // Земля
-        const earthPos = this.calculatePlanetPosition(time, 'earth');
         ctx.fillStyle = '#2196f3';
         ctx.beginPath();
-        // ctx.arc(centerX + earthPos[0] * scale, centerY + earthPos[1] * scale, 12, 0, Math.PI * 2);
+        ctx.arc(earthX, earthY, 12, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.fillText('🌍', centerX + earthPos[0] * scale - 6, centerY + earthPos[1] * scale + 4);
+
+        // Позиция Марса с учетом начального положения из бэкенда
+        const marsOrbitRadius = 1.524 * 1.496e11 * scale;
+        let marsX, marsY;
+
+        if (this.marsStartPos && this.marsStartPos.length >= 2) {
+            // Используем реальное начальное положение Марса
+            const marsStartAngle = Math.atan2(this.marsStartPos[1], this.marsStartPos[0]);
+            const marsAngle = marsStartAngle + (currentTime / 86400) * (2 * Math.PI / 687);
+            marsX = centerX + Math.cos(marsAngle) * marsOrbitRadius;
+            marsY = centerY + Math.sin(marsAngle) * marsOrbitRadius;
+        } else {
+            // Резервный расчет
+            const marsAngle = (currentTime / 86400) * (2 * Math.PI / 687);
+            marsX = centerX + Math.cos(marsAngle) * marsOrbitRadius;
+            marsY = centerY + Math.sin(marsAngle) * marsOrbitRadius;
+        }
 
         // Марс
-        const marsPos = this.calculatePlanetPosition(time, 'mars');
         ctx.fillStyle = '#ff5722';
         ctx.beginPath();
-        // ctx.arc(centerX + marsPos[0] * scale, centerY + marsPos[1] * scale, 10, 0, Math.PI * 2);
+        ctx.arc(marsX, marsY, 10, 0, Math.PI * 2);
         ctx.fill();
+
+        // Подписи планет
         ctx.fillStyle = '#fff';
-        ctx.fillText('🔴', centerX + marsPos[0] * scale - 6, centerY + marsPos[1] * scale + 4);
-    }
-
-    calculatePlanetPosition(timeDays, planet) {
-        // Упрощенная модель движения планет по эллиптическим орбитам
-        const orbits = {
-            'earth': { a: 1.0, e: 0.0167, period: 365.25, w: 0 },
-            'mars': { a: 1.524, e: 0.0934, period: 687.0, w: 286.5 * Math.PI/180 }
-        };
-
-        const orbit = orbits[planet];
-        const distance = orbit.a * 1.496e11;
-        const angle = orbit.w - Math.PI/2 + 2 * Math.PI * (timeDays % orbit.period) / orbit.period;
-
-        return [
-            distance * Math.cos(angle),
-            distance * Math.sin(angle)
-        ];
+        ctx.font = '12px Arial';
+        ctx.fillText('Земля', earthX - 20, earthY - 15);
+        ctx.fillText('Марс', marsX - 15, marsY - 15);
     }
 
     drawTrajectory(centerX, centerY, scale) {
         if (!this.ctx || this.trajectory.length === 0) return;
 
         const ctx = this.ctx;
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)';
         ctx.lineWidth = 2;
         ctx.beginPath();
 
-        // Рисуем только часть траектории до текущей точки
-        for (let i = 0; i <= this.currentIndex; i += 10) {
+        // Рисуем всю траекторию полупрозрачной
+        for (let i = 0; i < this.trajectory.length; i += 5) {
+            const point = this.trajectory[i];
+
+            if (point.phase !== "transfer") continue;
+            const x = centerX + point.x * scale;
+            const y = centerY + point.y * scale;
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+
+        // Рисуем пройденную часть траектории более яркой
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+
+        for (let i = 0; i <= this.currentIndex; i += 5) {
             if (i < this.trajectory.length) {
                 const point = this.trajectory[i];
+
+                if (point.phase !== "transfer") continue;
                 const x = centerX + point.x * scale;
                 const y = centerY + point.y * scale;
 
@@ -221,13 +261,21 @@ class MarsMissionAnimation {
 
         ctx.clearRect(0, 0, width, height);
 
-        // Динамический масштаб в зависимости от высоты
-        const maxHeight = Math.max(100000, point.y * 1.5); // Запас 50%
-        const scale = height / maxHeight;
+        // Рисуем звезды (неподвижные)
+        this.drawStars();
 
-        // Земля с динамическим размером
-        const baseEarthRadius = Math.min(width, height) * 0.4;
-        const earthRadius = baseEarthRadius * (1 - point.y / maxHeight * 0.5);
+        // Динамический масштаб - Земля должна уменьшаться по мере удаления
+        const maxVisibleHeight = 500000; // 500 км
+        const currentHeight = point ? point.y : 0;
+        const scale = height / maxVisibleHeight;
+
+        // Размер Земли уменьшается линейно с высотой
+        const minEarthRadius = Math.min(width, height) * 0.1;
+        const maxEarthRadius = Math.min(width, height) * 0.4;
+        const earthRadius = Math.max(minEarthRadius,
+            maxEarthRadius * (1 - currentHeight / maxVisibleHeight));
+
+        // Земля
         const gradient = ctx.createRadialGradient(
             width/2, height, earthRadius,
             width/2, height, earthRadius * 0.8
@@ -242,10 +290,11 @@ class MarsMissionAnimation {
 
         // Атмосфера
         if (this.request?.include_atmosphere) {
+            const atmosphereThickness = earthRadius * 0.05;
             ctx.strokeStyle = 'rgba(135, 206, 235, 0.3)';
-            ctx.lineWidth = 20;
+            ctx.lineWidth = atmosphereThickness;
             ctx.beginPath();
-            ctx.arc(width/2, height, earthRadius + 20, 0, Math.PI, true);
+            ctx.arc(width/2, height, earthRadius + atmosphereThickness/2, 0, Math.PI, true);
             ctx.stroke();
         }
 
@@ -254,12 +303,14 @@ class MarsMissionAnimation {
             const shipX = width/2;
             const shipY = height - point.y * scale;
 
-            if (shipY < height * 0.3) {
-                ctx.translate(0, height * 0.3 - shipY);
-            }
-
             this.drawSpacecraft(shipX, shipY, 0);
         }
+
+        // Отображение высоты
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px Arial';
+        ctx.fillText(`Высота: ${(currentHeight / 1000).toFixed(1)} км`, 20, 30);
+        ctx.fillText(`Скорость: ${(point?.velocity / 1000 || 0).toFixed(2)} км/с`, 20, 50);
     }
 
     drawLandingView(point) {
@@ -271,8 +322,21 @@ class MarsMissionAnimation {
 
         ctx.clearRect(0, 0, width, height);
 
+        // Рисуем звезды (неподвижные)
+        this.drawStars();
+
+        // Динамический масштаб для посадки
+        const maxVisibleHeight = 200000; // 200 км для посадки
+        const currentHeight = point ? point.y : 0;
+        const scale = height / maxVisibleHeight;
+
+        // Марс увеличивается по мере приближения
+        const minMarsRadius = Math.min(width, height) * 0.1;
+        const maxMarsRadius = Math.min(width, height) * 0.4;
+        const marsRadius = Math.max(minMarsRadius,
+            maxMarsRadius * (1 - currentHeight / maxVisibleHeight));
+
         // Марс
-        const marsRadius = Math.min(width, height) * 0.4;
         const gradient = ctx.createRadialGradient(
             width/2, height, marsRadius,
             width/2, height, marsRadius * 0.8
@@ -285,13 +349,31 @@ class MarsMissionAnimation {
         ctx.arc(width/2, height, marsRadius, 0, Math.PI, true);
         ctx.fill();
 
+        // Атмосфера Марса
+        if (this.request?.include_atmosphere) {
+            const atmosphereThickness = marsRadius * 0.03;
+            ctx.strokeStyle = 'rgba(255, 152, 0, 0.2)';
+            ctx.lineWidth = atmosphereThickness;
+            ctx.beginPath();
+            ctx.arc(width/2, height, marsRadius + atmosphereThickness/2, 0, Math.PI, true);
+            ctx.stroke();
+        }
+
         // Корабль
         if (point && point.y > 0) {
-            const scale = height / 100000;
             const shipX = width/2;
             const shipY = height - point.y * scale;
 
             this.drawSpacecraft(shipX, shipY, -90);
+        }
+
+        // Отображение высоты
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px Arial';
+        ctx.fillText(`Высота: ${(currentHeight / 1000).toFixed(1)} км`, 20, 30);
+        ctx.fillText(`Скорость: ${(point?.velocity || 0).toFixed(1)} м/с`, 20, 50);
+        if (point && point.y < 1000) {
+            ctx.fillText('ПОСАДКА!', width/2 - 30, height/2);
         }
     }
 
@@ -306,38 +388,41 @@ class MarsMissionAnimation {
         // Корпус
         ctx.fillStyle = '#ccc';
         ctx.beginPath();
-        ctx.moveTo(0, -20);
-        ctx.lineTo(-10, 20);
-        ctx.lineTo(10, 20);
+        ctx.moveTo(0, -15);
+        ctx.lineTo(-8, 15);
+        ctx.lineTo(8, 15);
         ctx.closePath();
         ctx.fill();
 
         // Окна
         ctx.fillStyle = '#87ceeb';
         ctx.beginPath();
-        ctx.arc(0, -5, 3, 0, Math.PI * 2);
+        ctx.arc(0, -5, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Сопло (если есть тяга)
+        ctx.fillStyle = '#ff4444';
+        ctx.beginPath();
+        ctx.moveTo(-5, 15);
+        ctx.lineTo(0, 20);
+        ctx.lineTo(5, 15);
+        ctx.closePath();
         ctx.fill();
 
         ctx.restore();
     }
 
     drawStars() {
-        if (!this.ctx || !this.canvas) return;
+        if (!this.ctx || !this.canvas || this.stars.length === 0) return;
 
         const ctx = this.ctx;
-        const width = this.canvas.width;
-        const height = this.canvas.height;
 
-        ctx.fillStyle = '#fff';
-        for (let i = 0; i < 200; i++) {
-            const x = Math.random() * width;
-            const y = Math.random() * height;
-            const size = Math.random() * 2;
-
+        this.stars.forEach(star => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
             ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
             ctx.fill();
-        }
+        });
     }
 
     drawCurrentFrame() {
@@ -390,6 +475,15 @@ class MarsMissionAnimation {
         }
     }
 
+    getCurrentPhaseSpeed() {
+        const currentPoint = this.trajectory[this.currentIndex];
+        if (!currentPoint) return this.baseAnimationSpeed;
+
+        const phase = currentPoint.phase;
+        const multiplier = this.phaseSpeedMultipliers[phase] || 1.0;
+        return Math.max(1, Math.floor(this.baseAnimationSpeed * multiplier));
+    }
+
     animate() {
         if (this.currentIndex >= this.trajectory.length) {
             this.stopAnimation();
@@ -397,13 +491,16 @@ class MarsMissionAnimation {
         }
 
         this.drawCurrentFrame();
-        this.currentIndex += this.animationSpeed;
+
+        // Динамическая скорость в зависимости от фазы
+        const phaseSpeed = this.getCurrentPhaseSpeed();
+        this.currentIndex += phaseSpeed;
+
         this.animationId = requestAnimationFrame(() => this.animate());
     }
 
     startAnimation() {
         if (this.trajectory.length === 0) return;
-        console.log(this.trajectory)
 
         this.isAnimating = true;
         this.currentIndex = 0;
@@ -423,6 +520,7 @@ class MarsMissionAnimation {
         this.stats = response.stats || {};
         this.request = response.request || {};
         this.planetaryData = response.planetary_positions || {};
+        this.marsStartPos = this.stats.mars_start_pos || [0, 0];
         this.drawCurrentFrame();
         this.updateMissionStats();
     }
@@ -436,17 +534,27 @@ class MarsMissionAnimation {
         if (this.stats.total_time !== undefined) {
             updateStat('total-time', (this.stats.total_time / 86400).toFixed(1) + ' дней');
         }
-        if (this.stats.delta_v !== undefined) {
-            updateStat('delta-v', (this.stats.delta_v / 1000).toFixed(1) + ' км/с');
+
+        // Расчет ΔV на основе разницы скоростей
+        if (this.trajectory.length > 1) {
+            const initialVelocity = this.trajectory[0].velocity;
+            const finalVelocity = this.trajectory[this.trajectory.length - 1].velocity;
+            const deltaV = Math.abs(finalVelocity - initialVelocity);
+            updateStat('delta-v', (deltaV / 1000).toFixed(1) + ' км/с');
         }
+
         if (this.stats.fuel_consumed !== undefined) {
-            updateStat('fuel-consumed', this.stats.fuel_consumed.toLocaleString() + ' кг');
+            updateStat('fuel-consumed', Math.round(this.stats.fuel_consumed).toLocaleString() + ' кг');
         }
-        if (this.stats.max_acceleration !== undefined) {
-            updateStat('max-acceleration', (this.stats.max_acceleration / 9.81).toFixed(1) + ' g');
+
+        // Расчет максимального ускорения из траектории
+        if (this.trajectory.length > 0) {
+            const maxOverload = Math.max(...this.trajectory.map(p => Math.abs(p.overload || 0)));
+            updateStat('max-acceleration', (maxOverload / 9.81).toFixed(1) + ' g');
         }
+
         if (this.stats.arrival_velocity !== undefined) {
-            updateStat('arrival-velocity', (this.stats.arrival_velocity).toFixed(1) + ' м/с');
+            updateStat('arrival-velocity', this.stats.arrival_velocity.toFixed(1) + ' м/с');
         }
     }
 }
@@ -473,14 +581,15 @@ async function startMission() {
         return;
     }
 
+    // Сбор параметров согласно новому Python API
     const request = {
         initial_mass: parseFloat(document.getElementById('initial_mass').value) || 1000000,
-        thrust: parseFloat(document.getElementById('thrust').value) || 20000000,
-        specific_impulse: parseFloat(document.getElementById('specific_impulse').value) || 350,
+        gases_velocity: parseFloat(document.getElementById('gases_velocity').value) || 20000000,
+        velocity: parseFloat(document.getElementById('velocity').value) || 350,
         landing_mass: parseFloat(document.getElementById('landing_mass').value) || 10000,
-        landing_thrust: parseFloat(document.getElementById('landing_thrust').value) || 500000,
+        landing_thrust: 500000,
+        landing_angle: -90,
         departure_date: document.getElementById('departure_date').value || '2024-01-01',
-        transfer_time: parseFloat(document.getElementById('transfer_time').value) || 200,
         include_atmosphere: document.getElementById('include_atmosphere').checked,
         include_planetary_gravity: document.getElementById('include_planetary_gravity').checked,
         include_orientation: document.getElementById('include_orientation').checked
@@ -507,7 +616,7 @@ async function startMission() {
             createCharts(result.trajectory);
             missionAnimation.startAnimation();
         } else {
-            throw new Error(result.error || 'Неизвестная ошибка');
+            throw new Error(result.message || 'Неизвестная ошибка');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -517,7 +626,11 @@ async function startMission() {
 
 function pauseMission() {
     if (missionAnimation) {
-        missionAnimation.stopAnimation();
+        if (missionAnimation.isAnimating) {
+            missionAnimation.stopAnimation();
+        } else {
+            missionAnimation.startAnimation();
+        }
     }
 }
 
@@ -525,6 +638,7 @@ function resetMission() {
     if (missionAnimation) {
         missionAnimation.stopAnimation();
         missionAnimation.trajectory = [];
+        missionAnimation.currentIndex = 0;
         missionAnimation.drawCurrentFrame();
     }
 
@@ -541,6 +655,12 @@ function resetMission() {
     // Сброс индикаторов фаз
     document.querySelectorAll('.phase-indicator').forEach(indicator => {
         indicator.classList.remove('active');
+    });
+
+    // Сброс реального времени
+    document.querySelectorAll('.real-time-stats span').forEach(el => {
+        const span = el.querySelector('span');
+        if (span) span.textContent = '-';
     });
 }
 
@@ -569,25 +689,36 @@ function createVelocityMassChart(trajectory) {
                     label: 'Скорость (км/с)',
                     data: velocities,
                     borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
                     yAxisID: 'y',
+                    borderWidth: 2,
+                    tension: 0.1
                 },
                 {
                     label: 'Масса (тонны)',
                     data: masses,
                     borderColor: 'rgb(54, 162, 235)',
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
                     yAxisID: 'y1',
+                    borderWidth: 2,
+                    tension: 0.1
                 }
             ]
         },
         options: {
             responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             scales: {
                 x: {
                     title: {
                         display: true,
                         text: 'Время (дни)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 },
                 y: {
@@ -597,6 +728,9 @@ function createVelocityMassChart(trajectory) {
                     title: {
                         display: true,
                         text: 'Скорость (км/с)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 },
                 y1: {
@@ -610,6 +744,13 @@ function createVelocityMassChart(trajectory) {
                     grid: {
                         drawOnChartArea: false,
                     },
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#fff'
+                    }
                 }
             }
         }

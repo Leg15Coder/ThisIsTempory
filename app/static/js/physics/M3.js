@@ -12,13 +12,13 @@ class MarsMissionAnimation {
         this.currentIndex = 0;
         this.baseAnimationSpeed = 1;
         this.phaseSpeedMultipliers = {
-            'launch': 0.1,     // Медленнее для взлета
-            'transfer': 1.0,   // Нормальная скорость для перелета
-            'landing': 0.1     // Медленнее для посадки
+            'launch': 0.1,
+            'transfer': 1.0,
+            'landing': 0.1
         };
         this.isAnimating = false;
         this.stats = {};
-        this.viewMode = 'solar';
+        this.viewMode = 'transfer';
         this.request = null;
         this.stars = [];
         this.planetaryData = {};
@@ -43,14 +43,6 @@ class MarsMissionAnimation {
                 if (speedValue) {
                     speedValue.textContent = this.baseAnimationSpeed + 'x';
                 }
-            });
-        }
-
-        const viewModeSelect = document.getElementById('view-mode');
-        if (viewModeSelect) {
-            viewModeSelect.addEventListener('change', (e) => {
-                this.viewMode = e.target.value;
-                this.drawCurrentFrame();
             });
         }
     }
@@ -210,7 +202,7 @@ class MarsMissionAnimation {
 
         const ctx = this.ctx;
         ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         ctx.beginPath();
 
         // Рисуем всю траекторию полупрозрачной
@@ -265,20 +257,20 @@ class MarsMissionAnimation {
         this.drawStars();
 
         // Динамический масштаб - Земля должна уменьшаться по мере удаления
-        const maxVisibleHeight = 500000; // 500 км
+        const maxVisibleHeight = 6000000; // 500 км
         const currentHeight = point ? point.y : 0;
         const scale = height / maxVisibleHeight;
 
         // Размер Земли уменьшается линейно с высотой
-        const minEarthRadius = Math.min(width, height) * 0.1;
-        const maxEarthRadius = Math.min(width, height) * 0.4;
+        const minEarthRadius = Math.min(width, height) * 0.01;
+        const maxEarthRadius = Math.min(width, height) * 0.45;
         const earthRadius = Math.max(minEarthRadius,
             maxEarthRadius * (1 - currentHeight / maxVisibleHeight));
 
         // Земля
         const gradient = ctx.createRadialGradient(
             width/2, height, earthRadius,
-            width/2, height, earthRadius * 0.8
+            width/2, height, earthRadius * 0.5
         );
         gradient.addColorStop(0, '#1e88e5');
         gradient.addColorStop(1, '#0d47a1');
@@ -326,13 +318,13 @@ class MarsMissionAnimation {
         this.drawStars();
 
         // Динамический масштаб для посадки
-        const maxVisibleHeight = 200000; // 200 км для посадки
+        const maxVisibleHeight = 3000000;
         const currentHeight = point ? point.y : 0;
         const scale = height / maxVisibleHeight;
 
         // Марс увеличивается по мере приближения
-        const minMarsRadius = Math.min(width, height) * 0.1;
-        const maxMarsRadius = Math.min(width, height) * 0.4;
+        const minMarsRadius = Math.min(width, height) * 0.01;
+        const maxMarsRadius = Math.min(width, height) * 0.45;
         const marsRadius = Math.max(minMarsRadius,
             maxMarsRadius * (1 - currentHeight / maxVisibleHeight));
 
@@ -364,7 +356,7 @@ class MarsMissionAnimation {
             const shipX = width/2;
             const shipY = height - point.y * scale;
 
-            this.drawSpacecraft(shipX, shipY, -90);
+            this.drawSpacecraft(shipX, shipY, 0);
         }
 
         // Отображение высоты
@@ -431,7 +423,7 @@ class MarsMissionAnimation {
         const currentPoint = this.trajectory[this.currentIndex];
 
         switch (this.viewMode) {
-            case 'solar':
+            case 'transfer':
                 this.drawSolarSystemView(currentPoint);
                 break;
             case 'launch':
@@ -454,9 +446,14 @@ class MarsMissionAnimation {
             if (element) element.textContent = value;
         };
 
-        updateElement('current-altitude', (point.y / 1000).toFixed(1));
+        if (this.viewMode !== 'transfer') {
+            updateElement('current-altitude', (point.y / 1000).toFixed(1));
+        } else {
+            updateElement('current-altitude', '-');
+        }
         updateElement('current-velocity', (point.velocity / 1000).toFixed(2));
         updateElement('current-mass', Math.round(point.mass));
+        updateElement('current-overload', (point.overload).toFixed(1));
         updateElement('current-time', (point.time / 86400).toFixed(1));
     }
 
@@ -489,6 +486,9 @@ class MarsMissionAnimation {
             this.stopAnimation();
             return;
         }
+
+        const currentPoint = this.trajectory[this.currentIndex];
+        this.viewMode = currentPoint.phase;
 
         this.drawCurrentFrame();
 
@@ -535,26 +535,13 @@ class MarsMissionAnimation {
             updateStat('total-time', (this.stats.total_time / 86400).toFixed(1) + ' дней');
         }
 
-        // Расчет ΔV на основе разницы скоростей
-        if (this.trajectory.length > 1) {
-            const initialVelocity = this.trajectory[0].velocity;
-            const finalVelocity = this.trajectory[this.trajectory.length - 1].velocity;
-            const deltaV = Math.abs(finalVelocity - initialVelocity);
-            updateStat('delta-v', (deltaV / 1000).toFixed(1) + ' км/с');
-        }
-
         if (this.stats.fuel_consumed !== undefined) {
             updateStat('fuel-consumed', Math.round(this.stats.fuel_consumed).toLocaleString() + ' кг');
         }
 
-        // Расчет максимального ускорения из траектории
         if (this.trajectory.length > 0) {
             const maxOverload = Math.max(...this.trajectory.map(p => Math.abs(p.overload || 0)));
             updateStat('max-acceleration', (maxOverload / 9.81).toFixed(1) + ' g');
-        }
-
-        if (this.stats.arrival_velocity !== undefined) {
-            updateStat('arrival-velocity', this.stats.arrival_velocity.toFixed(1) + ' м/с');
         }
     }
 }
@@ -586,13 +573,10 @@ async function startMission() {
         initial_mass: parseFloat(document.getElementById('initial_mass').value) || 1000000,
         gases_velocity: parseFloat(document.getElementById('gases_velocity').value) || 20000000,
         velocity: parseFloat(document.getElementById('velocity').value) || 350,
+        landing_velocity: parseFloat(document.getElementById('landing_velocity').value) || 350,
         landing_mass: parseFloat(document.getElementById('landing_mass').value) || 10000,
-        landing_thrust: 500000,
-        landing_angle: -90,
-        departure_date: document.getElementById('departure_date').value || '2024-01-01',
         include_atmosphere: document.getElementById('include_atmosphere').checked,
-        include_planetary_gravity: document.getElementById('include_planetary_gravity').checked,
-        include_orientation: document.getElementById('include_orientation').checked
+        bounded_overload: document.getElementById('bounded_overload').checked
     };
 
     try {

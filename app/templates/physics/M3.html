@@ -17,24 +17,24 @@
 
                 <div class="input-section">
                     <div class="input-group">
-                        <label for="departure_date">Дата старта:</label>
-                        <input type="date" id="departure_date" value="2024-01-01">
-                    </div>
-                    <div class="input-group">
                         <label for="initial_mass">Начальная масса (кг):</label>
                         <input type="number" id="initial_mass" value="1000000" step="1000">
                     </div>
                     <div class="input-group">
                         <label for="landing_mass">Масса полезного груза (кг):</label>
-                        <input type="number" id="landing_mass" value="10000" step="100">
+                        <input type="number" id="landing_mass" value="1" step="100">
                     </div>
                     <div class="input-group">
                         <label for="gases_velocity">Скорость вылета газов (м/с):</label>
-                        <input type="number" id="gases_velocity" value="20000000" step="100000">
+                        <input type="number" id="gases_velocity" value="20000" step="1">
                     </div>
                     <div class="input-group">
                         <label for="velocity">Скорость взлёта относительно Земли (м/с):</label>
-                        <input type="number" id="velocity" value="350" step="10">
+                        <input type="number" id="velocity" value="6350" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="velocity">Скорость посадки относительно Марса (м/с):</label>
+                        <input type="number" id="landing_velocity" value="1350" step="1">
                     </div>
                 </div>
 
@@ -42,15 +42,11 @@
                     <h3>Дополнительные параметры</h3>
                     <div class="checkbox-group">
                         <input type="checkbox" id="include_atmosphere">
-                        <label for="include_atmosphere">Учет атмосферы Земли</label>
+                        <label for="include_atmosphere">Учет атмосферы планет</label>
                     </div>
                     <div class="checkbox-group">
-                        <input type="checkbox" id="include_planetary_gravity">
-                        <label for="include_planetary_gravity">Учет гравитации планет</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="include_orientation">
-                        <label for="include_orientation">Управление ориентацией</label>
+                        <input type="checkbox" id="bounded_overload">
+                        <label for="bounded_overload">Ограничить перегрузку для пилота</label>
                     </div>
                 </div>
 
@@ -69,20 +65,12 @@
                         <span class="stat-value" id="total-time">-</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">ΔV:</span>
-                        <span class="stat-value" id="delta-v">-</span>
-                    </div>
-                    <div class="stat-item">
                         <span class="stat-label">Израсходовано топлива:</span>
                         <span class="stat-value" id="fuel-consumed">-</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Макс. ускорение:</span>
+                        <span class="stat-label">Максимальная перегрузка:</span>
                         <span class="stat-value" id="max-acceleration">-</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Скорость посадки:</span>
-                        <span class="stat-value" id="arrival-velocity">-</span>
                     </div>
                 </div>
 
@@ -107,12 +95,6 @@
                 <label for="animation-speed">Скорость анимации:</label>
                 <input type="range" id="animation-speed" min="1" max="100" value="10">
                 <span id="speed-value">10x</span>
-
-                <select id="view-mode">
-                    <option value="solar">Солнечная система</option>
-                    <option value="launch">Запуск</option>
-                    <option value="landing">Посадка</option>
-                </select>
             </div>
 
             <div class="canvas-container">
@@ -124,6 +106,7 @@
                 <div class="real-time-stats">
                     <span>Высота: <span id="current-altitude">-</span> км</span>
                     <span>Скорость: <span id="current-velocity">-</span> км/с</span>
+                    <span>Ускорение: <span id="current-overload">-</span> м/c<sup>2</sup></span>
                     <span>Масса: <span id="current-mass">-</span> кг</span>
                     <span>Время: <span id="current-time">-</span> дней</span>
                 </div>

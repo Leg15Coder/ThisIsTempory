@@ -21,24 +21,14 @@ class MissionPhase(str, Enum):
     LANDING = "landing"
 
 
-class MarsMissionRequest(BaseModel):
-    # Параметры запуска
-    initial_mass: float = 1000000  # кг
+class MarsMissionRequest(BaseModel):  # В СИ
+    initial_mass: float = 1000000
     gases_velocity: float = 1000000
     velocity: float = 350
-
-    # Параметры перелета
-    departure_date: str = "2024-01-01"
-
-    # Параметры посадки
-    landing_mass: float = 10000  # кг
-    landing_thrust: float = 500000  # Н
-    landing_angle: float = -90  # градусы
-
-    # Дополнительные параметры
+    landing_velocity: float = 350
+    landing_mass: float = 10000
     include_atmosphere: bool = False
-    include_planetary_gravity: bool = False
-    include_orientation: bool = False
+    bounded_overload: bool = False
 
 
 class TrajectoryPoint(BaseModel):
@@ -73,8 +63,8 @@ class ErrorResponse(BaseModel):
     error: str
 
 
-# Константы
 G = 6.67430e-11  # гравитационная постоянная
+g0 = 9.81
 M_SUN = 1.989e30  # масса Солнца
 M_EARTH = 5.972e24  # масса Земли
 M_MARS = 6.39e23  # масса Марса
@@ -89,47 +79,50 @@ class MarsMissionSimulator:
         self.trajectory = []
 
     def calculate_launch_phase(self):
-        """Фаза 1: Вертикальный взлет с Земли"""
-        dt = 0.5  # шаг времени в секундах
+        dt = 0.5
 
         mass = self.request.initial_mass
         gases_velocity = self.request.gases_velocity
         target_velocity = self.request.velocity
+        phase = MissionPhase.LAUNCH
 
         t = 0
         altitude = 0
         velocity = 0
-        dm_dt = mass * 0.05  # Начальный отрыв
-        phase = MissionPhase.LAUNCH
 
-        # Параметры атмосферы (если включено)
         rho0 = 1.225 if self.request.include_atmosphere else 0
         atmosphere_height = 100_000
         height_per_decrease_density = 8_500
 
-        max_altitude = 400_000
+        max_altitude = R_EARTH
 
-        while altitude < max_altitude:  # до высоты 200 км
-            if mass <= self.request.landing_mass or velocity < 0:
+        while altitude < max_altitude:
+            if mass <= self.request.landing_mass or altitude < 0:
                 raise MissionFailException("Недостаточно топлива для взлёта с Земли")
 
-            # Гравитация
             g = G * M_EARTH / (R_EARTH + altitude) ** 2
 
-            # Сопротивление атмосферы (если включено)
-            if self.request.include_atmosphere and altitude < atmosphere_height:
+            if self.request.include_atmosphere and altitude <= atmosphere_height:
                 rho = rho0 * math.exp(-altitude / height_per_decrease_density)
-                drag = 0.5 * rho * min(velocity, target_velocity) ** 2 * 0.3  # Cd * A примерно
+                drag = 0.5 * rho * velocity ** 2 * 0.3  # Примерно
             else:
                 drag = 0
 
             if velocity < target_velocity:
-                acceleration = (dm_dt * dt * gases_velocity - mass * g - drag) / mass
+                required_acceleration = (target_velocity - velocity) / dt
+                required_thrust = mass * (required_acceleration + g) + drag
+
+                max_possible_thrust = mass * 0.1 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
+
+                actual_thrust = min(required_thrust, max_possible_thrust)
+                dm_dt = actual_thrust / gases_velocity
+
+                acceleration = (dm_dt * gases_velocity - mass * g - drag) / mass
                 velocity += acceleration * dt
-                dm_dt = mass * acceleration / gases_velocity
             else:
                 acceleration = (mass * g + drag) / mass
                 dm_dt = mass * acceleration / gases_velocity
+                acceleration = 0
 
             altitude += min(velocity, target_velocity) * dt
             t += dt
@@ -145,101 +138,70 @@ class MarsMissionSimulator:
         return mass, target_velocity, altitude
 
     def calculate_transfer_phase(self, initial_mass: float, initial_velocity: float):
-        """Фаза 2: Перелет Земля-Марс по эллиптической орбите"""
-        dt = 3600  # шаг времени в час
+        dt = 3600
         start_t = self.trajectory[-1].time if self.trajectory else 0
         gases_velocity = self.request.gases_velocity
         t = start_t
         phase = MissionPhase.TRANSFER
 
-        # Орбитальные параметры (круговые орбиты)
-        r_earth = 1.0 * AU  # радиус орбиты Земли
-        r_mars = 1.524 * AU  # радиус орбиты Марса
-        v_earth = 29.78e3  # орбитальная скорость Земли
-        v_mars = 24.07e3  # орбитальная скорость Марса
+        r_earth = 1.0 * AU
+        r_mars = 1.524 * AU
+        v_earth = 29.78e3
+        v_mars = 24.07e3
 
-        # Начальные условия для эллиптической орбиты КА
-        # Перигелий (ближайшая к Солнцу точка) = орбита Земли
         r_peri = r_earth
-        # Афелий (дальняя от Солнца точка) = орбита Марса
         r_apo = r_mars
 
-        # Параметры эллипса
-        a = (r_peri + r_apo) / 2  # большая полуось
-        e = (r_apo - r_peri) / (r_apo + r_peri)  # эксцентриситет
-        b = a * math.sqrt(1 - e ** 2)  # малая полуось
+        a = (r_peri + r_apo) / 2
+        e = (r_apo - r_peri) / (r_apo + r_peri)
+        b = a * math.sqrt(1 - e ** 2)
 
-        # Необходимая скорость в перигелии для эллиптической орбиты
         v_peri_needed = math.sqrt(G * M_SUN * (2 / r_peri - 1 / a))
 
-        # РАСЧЕТ РАСХОДА ТОПЛИВА ДЛЯ РАЗГОНА
-        # Начальная скорость КА после взлета (относительно Земли)
         v_relative_earth = initial_velocity
 
-        # Скорость КА относительно Солнца после выхода с орбиты Земли
         v_initial_sun = v_earth + v_relative_earth
 
-        # Необходимый прирост скорости для выхода на эллиптическую орбиту
         delta_v_needed = v_peri_needed - v_initial_sun
 
         if delta_v_needed > 0:
-            # Расчет расхода топлива по формуле Циолковского
             mass_after_burn = initial_mass * math.exp(-delta_v_needed / gases_velocity)
             fuel_consumed = initial_mass - mass_after_burn
 
-            # Проверка достаточности топлива
             if mass_after_burn < self.request.landing_mass:
                 raise MissionFailException("Недостаточно топлива для выхода на переходную орбиту")
 
             mass = mass_after_burn
-            # print(f"Расход топлива для разгона: {fuel_consumed:.0f} кг")
-            # print(f"Масса после разгона: {mass:.0f} кг")
-            # print(f"ΔV необходимо: {delta_v_needed:.2f} м/с")
         else:
             fuel_consumed = 0
             mass = initial_mass
-            # print("Дополнительный разгон не требуется")
 
-        # Угловые положения планет
-        # Земля в верхней точке (π/2) в момент старта
         theta_earth_start = math.pi / 2
-        # Марс в нижней точке (3π/2) в момент прибытия
         theta_mars_arrival = 3 * math.pi / 2
 
-        # Время перелета по эллипсу (половина периода)
-        transfer_time = math.pi * math.sqrt(a ** 3 / (G * M_SUN))  # время перелета от Земли к Марсу
+        transfer_time = math.pi * math.sqrt(a ** 3 / (G * M_SUN))
 
-        # Угловая скорость Марса
         omega_mars = v_mars / r_mars
 
-        # Угол Марса в момент старта
         theta_mars_start = theta_mars_arrival - omega_mars * transfer_time
 
-        # Начальные условия
-        # старт с позиции Земли с орбитальной скоростью + дополнительная
         x = r_earth * math.cos(theta_earth_start)
         y = r_earth * math.sin(theta_earth_start)
 
-        # Начальная скорость (касательная к орбите)
         vx = -v_peri_needed * math.sin(theta_earth_start)
         vy = v_peri_needed * math.cos(theta_earth_start)
 
         current_time = 0
 
-        # Моделирование движения по эллипсу
         while current_time < transfer_time:
-            # Текущее расстояние до Солнца
             r = math.sqrt(x ** 2 + y ** 2)
 
-            # Угловая позиция
             theta = math.atan2(y, x)
 
-            # Гравитация Солнца
             a_sun = -G * M_SUN / r ** 2
             ax = a_sun * math.cos(theta)
             ay = a_sun * math.sin(theta)
 
-            # Интегрирование (упрощенное)
             vx += ax * dt
             vy += ay * dt
             x += vx * dt
@@ -255,11 +217,9 @@ class MarsMissionSimulator:
                 overload=math.sqrt(ax ** 2 + ay ** 2)
             ))
 
-        # Финальные параметры
         final_r = math.sqrt(x ** 2 + y ** 2)
         final_v = math.sqrt(vx ** 2 + vy ** 2) - v_mars
 
-        # Позиция Марса в момент старта
         mars_start_pos = [
             r_mars * math.cos(theta_mars_start),
             r_mars * math.sin(theta_mars_start)
@@ -268,40 +228,58 @@ class MarsMissionSimulator:
         return mass, final_v, final_r, mars_start_pos
 
     def calculate_landing_phase(self, initial_mass: float, approach_velocity: float):
-        """Фаза 3: Посадка на Марс"""
-        dt = 5  # маленький шаг времени
+        dt = .5
         t = self.trajectory[-1].time if self.trajectory else 0
         gases_velocity = self.request.gases_velocity
         phase = MissionPhase.LANDING
 
-        altitude = 200_000  # начальная высота
+        altitude = 12 * R_MARS
         velocity = approach_velocity
         mass = initial_mass
-        min_velocity = 4.
-        max_velocity = 10.
+        min_velocity = self.request.landing_velocity
+        max_velocity = .8
 
         rho0 = 0.025 if self.request.include_atmosphere else 0
         atmosphere_height = 100_000
         height_per_decrease_density = 8_500
-        dm_dt = mass * 0.05
+
+        loc_dt = 1
+        loc_velocity = 0
+        while altitude > 2 * atmosphere_height:
+            g = G * M_MARS / (R_MARS + altitude) ** 2
+            loc_velocity += g * loc_dt
+            altitude -= loc_velocity * loc_dt
+
+        engine_start_altitude = self.calculate_engine_start_altitude(
+            velocity, mass, gases_velocity, min_velocity
+        )
 
         while altitude > 0:
-            # Гравитация Марса
             g = G * M_MARS / (R_MARS + altitude) ** 2
 
-            # Сопротивление атмосферы (если включено)
             if self.request.include_atmosphere and altitude < atmosphere_height:
                 rho = rho0 * math.exp(-altitude / height_per_decrease_density)
-                drag = 0.5 * rho * velocity ** 2 * 0.3  # Cd * A примерно
+                drag = 0.5 * rho * velocity ** 2 * 0.3  # Примерно
             else:
                 drag = 0
 
-            if mass < self.request.landing_mass or velocity <= min_velocity:
+            if (mass < self.request.landing_mass or
+                    velocity <= min_velocity and altitude > engine_start_altitude or
+                    velocity < max_velocity and altitude <= engine_start_altitude):
                 acceleration = (mass * g + drag) / mass
                 dm_dt = 0
             else:
-                acceleration = (dm_dt * dt * gases_velocity - mass * g - drag) / mass
-                dm_dt = -mass * acceleration / gases_velocity
+                target_velocity = min_velocity if altitude > engine_start_altitude else max_velocity
+
+                required_acceleration = -(target_velocity - velocity) / dt
+                required_thrust = mass * (required_acceleration + g) + drag
+
+                max_possible_thrust = mass * 0.1 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
+
+                actual_thrust = min(required_thrust, max_possible_thrust)
+                dm_dt = actual_thrust / gases_velocity
+
+                acceleration = -(dm_dt * gases_velocity - mass * g - drag) / mass
 
             velocity += acceleration * dt
             altitude -= velocity * dt
@@ -324,16 +302,29 @@ class MarsMissionSimulator:
             overload=0
         ))
 
-        if velocity > max_velocity * 4:
+        if velocity > max_velocity * 64:
             raise MissionFailException("Корабль разбился при посадке")
 
-        if velocity > max_velocity:
+        if velocity > max_velocity * 16:
             raise MissionFailException("Корабль серьёзно пострадал при посадке")
 
         return mass, velocity
 
+    def calculate_engine_start_altitude(self, velocity: float, mass: float, gases_velocity: float, min_velocity: float):
+        max_thrust = mass * 0.1 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
+        max_acceleration = max_thrust / mass
+
+        g_surface = G * M_MARS / R_MARS ** 2
+
+        effective_acceleration = max_acceleration - g_surface
+
+        required_height = (velocity ** 2 - min_velocity ** 2) / (2 * effective_acceleration)
+
+        safety_margin = 1.2
+
+        return required_height * safety_margin
+
     def simulate_mission(self):
-        """Полная симуляция миссии"""
         try:
             # Фаза 1: Запуск
             mass_after_launch, v_launch, alt_launch = self.calculate_launch_phase()
@@ -348,7 +339,6 @@ class MarsMissionSimulator:
                 mass_after_transfer, v_transfer
             )
 
-            # Статистика
             stats = MissionStats(
                 total_time=self.trajectory[-1].time,
                 fuel_consumed=self.request.initial_mass - mass_after_landing,
@@ -367,7 +357,6 @@ class MarsMissionSimulator:
             raise HTTPException(status_code=500, detail=f"Ошибка симуляции: {str(e)}")
 
     def get_planetary_positions(self):
-        """Получить позиции планет"""
         return {
             "earth": [1.0 * AU, 0],
             "mars": [1.524 * AU, math.pi * 3 / 2],  # примерное положение
@@ -382,7 +371,6 @@ async def mars_mission_page(request: Request):
 
 @router.post("/simulate", response_model=MarsMissionResponse)
 async def simulate_mars_mission(request: MarsMissionRequest):
-    """Запустить симуляцию миссии на Марс"""
     try:
         simulator = MarsMissionSimulator(request)
         return simulator.simulate_mission()

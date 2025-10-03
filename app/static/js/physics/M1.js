@@ -264,6 +264,144 @@ class ProjectileAnimation {
         this.drawStaticElements();
         this.drawTrajectory();
     }
+
+    findSpeedAtTime(targetTime) {
+        if (this.trajectoryData.length === 0) {
+            return null;
+        }
+
+        // Если запрошено время 0 - возвращаем начальную скорость
+        if (targetTime <= 0) {
+            const initialSpeed = Math.sqrt(this.vx0 * this.vx0 + this.vy0 * this.vy0);
+            return {
+                speed: initialSpeed,
+                vx: this.vx0,
+                vy: this.vy0,
+                x: this.x0,
+                y: this.y0,
+                time: 0,
+                exactMatch: true
+            };
+        }
+
+        // Ищем ближайшую точку по времени
+        let accumulatedTime = 0;
+        let closestPoint = null;
+        let minTimeDiff = Infinity;
+
+        for (let i = 0; i < this.trajectoryData.length; i++) {
+            const point = this.trajectoryData[i];
+            accumulatedTime += point.dt || 0;
+
+            const timeDiff = Math.abs(accumulatedTime - targetTime);
+
+            if (timeDiff < minTimeDiff) {
+                minTimeDiff = timeDiff;
+                closestPoint = {
+                    index: i,
+                    point: point,
+                    time: accumulatedTime,
+                    timeDiff: timeDiff
+                };
+            }
+
+            // Если нашли точку с достаточно маленькой разницей во времени
+            if (timeDiff < 0.001) {
+                break;
+            }
+        }
+
+        if (!closestPoint) {
+            return null;
+        }
+
+        // Вычисляем скорость в этой точке
+        const speed = this.calculateSpeedAtPoint(closestPoint.index);
+        const velocityComponents = this.calculateVelocityComponents(closestPoint.index);
+
+        return {
+            speed: speed,
+            vx: velocityComponents.vx,
+            vy: velocityComponents.vy,
+            x: closestPoint.point.x,
+            y: closestPoint.point.y,
+            time: closestPoint.time,
+            timeDiff: closestPoint.timeDiff,
+            exactMatch: closestPoint.timeDiff < 0.001
+        };
+    }
+
+    calculateSpeedAtPoint(pointIndex) {
+        if (this.trajectoryData.length <= 1) {
+            return Math.sqrt(this.vx0 * this.vx0 + this.vy0 * this.vy0);
+        }
+
+        if (pointIndex === 0) {
+            // Начальная скорость
+            return Math.sqrt(this.vx0 * this.vx0 + this.vy0 * this.vy0);
+        }
+
+        const currentPoint = this.trajectoryData[pointIndex];
+        const prevPoint = this.trajectoryData[pointIndex - 1];
+
+        const dx = currentPoint.x - prevPoint.x;
+        const dy = currentPoint.y - prevPoint.y;
+        const dt = currentPoint.dt || 0.01;
+
+        return Math.sqrt((dx/dt)**2 + (dy/dt)**2);
+    }
+
+    calculateVelocityComponents(pointIndex) {
+        if (this.trajectoryData.length <= 1 || pointIndex === 0) {
+            return { vx: this.vx0, vy: this.vy0 };
+        }
+
+        const currentPoint = this.trajectoryData[pointIndex];
+        const prevPoint = this.trajectoryData[pointIndex - 1];
+        const dt = currentPoint.dt || 0.01;
+
+        return {
+            vx: (currentPoint.x - prevPoint.x) / dt,
+            vy: (currentPoint.y - prevPoint.y) / dt
+        };
+    }
+
+    // Метод для отображения точки на графике при запросе
+    highlightPointAtTime(targetTime) {
+        const result = this.findSpeedAtTime(targetTime);
+        if (!result) return;
+
+        this.drawStaticElements();
+        this.drawTrajectory();
+
+        // Рисуем маркер в найденной точке
+        const ctx = this.ctx;
+        const scaledPoint = this.scalePoint({ x: result.x, y: result.y });
+
+        // Рисуем маркер точки
+        ctx.fillStyle = '#28a745';
+        ctx.beginPath();
+        ctx.arc(scaledPoint.x, scaledPoint.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Обводка маркера
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Дополнительный круг для выделения
+        ctx.strokeStyle = '#28a745';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(scaledPoint.x, scaledPoint.y, 12, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Подпись точки
+        ctx.fillStyle = '#000';
+        ctx.font = '12px Arial';
+        ctx.fillText(`t=${result.time.toFixed(2)}с`, scaledPoint.x + 15, scaledPoint.y - 10);
+        ctx.fillText(`v=${result.speed.toFixed(2)}м/с`, scaledPoint.x + 15, scaledPoint.y + 5);
+    }
 }
 
 // Инициализация при загрузке страницы
@@ -327,9 +465,15 @@ function resetSimulation() {
         trajectoryChart.destroy();
         trajectoryChart = null;
     }
+
     document.getElementById('range').textContent = '-';
     document.getElementById('max-height').textContent = '-';
     document.getElementById('flight-time').textContent = '-';
+    document.getElementById('height-time').textContent = '-';
+    document.getElementById('current-speed').textContent = '-';
+
+    document.getElementById('query-time').value = '0';
+    document.getElementById('query-result').textContent = '';
 }
 
 function updateChart(trajectoryData) {
@@ -399,3 +543,46 @@ function updateStats(stats) {
     document.getElementById('max-height').textContent = stats.max_height.toFixed(3);
     document.getElementById('flight-time').textContent = stats.flight_time.toFixed(3);
 }
+
+function querySpeedAtTime() {
+    const queryTimeInput = document.getElementById('query-time');
+    const queryResult = document.getElementById('query-result');
+
+    if (!animation.trajectoryData || animation.trajectoryData.length === 0) {
+        queryResult.textContent = 'Сначала запустите моделирование';
+        queryResult.style.color = '#dc3545';
+        return;
+    }
+
+    const targetTime = parseFloat(queryTimeInput.value);
+
+    if (isNaN(targetTime) || targetTime < 0) {
+        queryResult.textContent = 'Введите корректное время (≥ 0)';
+        queryResult.style.color = '#dc3545';
+        return;
+    }
+
+    const result = animation.findSpeedAtTime(targetTime);
+
+    if (!result) {
+        queryResult.textContent = 'Не удалось найти данные для указанного времени';
+        queryResult.style.color = '#dc3545';
+        return;
+    }
+
+    // Форматируем результат
+    let resultText = `Скорость в момент времени ${result.time.toFixed(3)}с: ${result.speed.toFixed(3)} м/с`;
+    resultText += `\nКомпоненты: Vx=${result.vx.toFixed(3)} м/с, Vy=${result.vy.toFixed(3)} м/с`;
+    resultText += `\nКоординаты: x=${result.x.toFixed(3)} м, y=${result.y.toFixed(3)} м`;
+
+    if (!result.exactMatch) {
+        resultText += `\n(ближайшая доступная точка, разница: ${result.timeDiff.toFixed(4)}с)`;
+    }
+
+    queryResult.innerHTML = resultText.replace(/\n/g, '<br>');
+    queryResult.style.color = result.exactMatch ? '#088725' : '#0f0107';
+
+    // Подсвечиваем точку на анимации
+    animation.highlightPointAtTime(targetTime);
+}
+

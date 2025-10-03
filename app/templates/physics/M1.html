@@ -73,7 +73,7 @@
             </div>
         </div>
 
-                <div class="results-panel">
+        <div class="results-panel">
             <h2>Результаты</h2>
             <div id="stats">
                 <p>Дальность полета: <span id="range">-</span> м</p>
@@ -84,7 +84,21 @@
             </div>
         </div>
 
+        <div class="speed-query" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <h3>Запрос скорости в момент времени</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label for="query-time">Время после броска (с):</label>
+                <input type="number" id="query-time" step="0.01" min="0" value="0"
+                       style="width: 80px; padding: 5px;">
+                <button onclick="querySpeedAtTime()"
+                        style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Найти скорость
+                </button>
             </div>
+            <div id="query-result" style="margin-top: 10px; font-weight: bold; color: #28a745;"></div>
+        </div>
+
+        </div>
 
 
 

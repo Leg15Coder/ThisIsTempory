@@ -114,27 +114,20 @@ class ProjectileMotion:
                 times.append(t)
 
                 if new_y < 0 and x[-2] != x[-1]:
-                    if True or new_y < self.ACCURACY:
-                        k = (y[-2] - y[-1]) / (x[-2] - x[-1])
-                        b = y[-1] - x[-1] * k
+                    k = (y[-2] - y[-1]) / (x[-2] - x[-1])
+                    b = y[-1] - x[-1] * k
 
-                        if k == 0:
-                            x[-1] -= vx[-1] * dt
-                            y[-1] = 0
-                            break
-
-                        x[-1] = -b / k
+                    if k == 0:
+                        x[-1] -= vx[-1] * dt
                         y[-1] = 0
                         break
-                    else:
-                        x.pop()
-                        y.pop()
-                        vx.pop()
-                        vy.pop()
-                        times.pop()
-                        t -= dt
-                        const *= 1.1
-                        p_const *= 0.9
+
+                    x[-1] = -b / k
+                    y[-1] = 0
+                    break
+                elif 90 - self.angle < 1e-6:
+                    y[-1] = 0
+                    break
 
             const *= 1.05
             p_const *= 0.95

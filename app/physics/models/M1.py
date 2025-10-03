@@ -46,14 +46,13 @@ class ProjectileMotion:
                  viscous_friction: float, drag_coefficient: float, mass: float):
         self.MAX_OPERATIONS = 4 * 10 ** 2
         self.ACCURACY = 0.05
-        self.angle = math.radians(angle)  # преобразуем в радианы
+        self.angle = math.radians(angle)
         self.v0 = velocity
         self.g = gravity
         self.mass = mass
-        self.k_viscous = viscous_friction  # коэффициент вязкого трения
-        self.k_drag = drag_coefficient  # коэффициент лобового сопротивления
+        self.k_viscous = viscous_friction
+        self.k_drag = drag_coefficient
 
-        # Начальные условия
         self.x0 = 0
         self.y0 = 0
         self.vx0 = self.v0 * math.cos(self.angle)
@@ -62,18 +61,15 @@ class ProjectileMotion:
     def _calculate_step(self, x, y, current_vx, current_vy, dt):
         current_v = math.sqrt(current_vx ** 2 + current_vy ** 2)
 
-        # Силы сопротивления
-        drag_force_x = -self.k_drag * current_v * current_vx  # лобовое сопротивление
-        viscous_force_x = -self.k_viscous * current_vx  # вязкое трение
+        drag_force_x = -self.k_drag * current_v * current_vx
+        viscous_force_x = -self.k_viscous * current_vx
 
         drag_force_y = -self.k_drag * current_v * current_vy
         viscous_force_y = -self.k_viscous * current_vy
 
-        # Ускорения
         ax = (drag_force_x + viscous_force_x) / self.mass
         ay = -self.g + (drag_force_y + viscous_force_y) / self.mass
 
-        # Новые скорости и координаты
         new_vx = max(current_vx + ax * dt, 0)
         new_vy = current_vy + ay * dt
         new_x = x + current_vx * dt
@@ -86,55 +82,62 @@ class ProjectileMotion:
         dt = max_time / self.MAX_OPERATIONS
         const = 10.0
         p_const = 1.0
-
         x, y = [self.x0], [self.y0]
-        vx, vy = [self.vx0], [self.vy0]
         t = 0
         times = [t]
 
-        while y[-1] >= 0:
-            new_x, new_y, new_vx, new_vy = self._calculate_step(x[-1], y[-1], vx[-1], vy[-1], dt)
-            new_x_half, new_y_half, new_vx_half, new_vy_half = self._calculate_step(x[-1], y[-1], vx[-1], vy[-1], dt/2)
+        while len(x) < self.MAX_OPERATIONS / 4:
+            x, y = [self.x0], [self.y0]
+            vx, vy = [self.vx0], [self.vy0]
+            t = 0
+            times = [t]
 
-            err = math.sqrt((new_vx - new_vx_half) ** 2 + (new_vy - new_vy_half) ** 2) / math.sqrt(vx[-1] ** 2 + vy[-1] ** 2 + self.ACCURACY / 100.0)
+            while y[-1] >= 0:
+                new_x, new_y, new_vx, new_vy = self._calculate_step(x[-1], y[-1], vx[-1], vy[-1], dt)
+                new_x_half, new_y_half, new_vx_half, new_vy_half = self._calculate_step(x[-1], y[-1], vx[-1], vy[-1], dt/2)
 
-            if err > self.ACCURACY * p_const:
-                dt = dt / 2
-                continue
-            elif err < self.ACCURACY / const:
-                dt *= 1.5
-                continue
+                err = math.sqrt((new_vx - new_vx_half) ** 2 + (new_vy - new_vy_half) ** 2) / math.sqrt(vx[-1] ** 2 + vy[-1] ** 2 + self.ACCURACY / 100.0)
 
-            x.append(new_x)
-            y.append(new_y)
-            vx.append(new_vx)
-            vy.append(new_vy)
+                if err > self.ACCURACY * p_const:
+                    dt = dt / 2
+                    continue
+                elif err < self.ACCURACY / const:
+                    dt *= 1.5
+                    continue
 
-            t += dt
-            times.append(t)
+                x.append(new_x)
+                y.append(new_y)
+                vx.append(new_vx)
+                vy.append(new_vy)
 
-            if new_y < 0 and x[-2] != x[-1]:
-                if True or new_y < self.ACCURACY:
-                    k = (y[-2] - y[-1]) / (x[-2] - x[-1])
-                    b = y[-1] - x[-1] * k
+                t += dt
+                times.append(t)
 
-                    if k == 0:
-                        x[-1] -= vx[-1] * dt
+                if new_y < 0 and x[-2] != x[-1]:
+                    if True or new_y < self.ACCURACY:
+                        k = (y[-2] - y[-1]) / (x[-2] - x[-1])
+                        b = y[-1] - x[-1] * k
+
+                        if k == 0:
+                            x[-1] -= vx[-1] * dt
+                            y[-1] = 0
+                            break
+
+                        x[-1] = -b / k
                         y[-1] = 0
                         break
+                    else:
+                        x.pop()
+                        y.pop()
+                        vx.pop()
+                        vy.pop()
+                        times.pop()
+                        t -= dt
+                        const *= 1.1
+                        p_const *= 0.9
 
-                    x[-1] = -b / k
-                    y[-1] = 0
-                    break
-                else:
-                    x.pop()
-                    y.pop()
-                    vx.pop()
-                    vy.pop()
-                    times.pop()
-                    t -= dt
-                    const *= 1.1
-                    p_const *= 0.9
+            const *= 1.05
+            p_const *= 0.95
 
         return x, y, times
 
@@ -149,7 +152,6 @@ async def render_m1(request: Request):
 @router.post("/calculate", response_model=TrajectoryResponse)
 async def calculate_trajectory(request: TrajectoryRequest):
     try:
-        # Валидация входных данных
         if request.mass <= 0:
             raise HTTPException(status_code=400, detail="Масса должна быть положительна")
         if not (0 <= request.angle <= 90):
@@ -163,7 +165,6 @@ async def calculate_trajectory(request: TrajectoryRequest):
         if request.drag_coefficient < 0:
             raise HTTPException(status_code=400, detail="Коэффициент лобового трения не может быть отрицательным")
 
-        # Создаем модель
         projectile = ProjectileMotion(
             mass=request.mass,
             angle=request.angle,
@@ -173,13 +174,10 @@ async def calculate_trajectory(request: TrajectoryRequest):
             drag_coefficient=request.drag_coefficient
         )
 
-        # Рассчитываем траекторию
         x, y, times = projectile.calculate_trajectory_euler()
 
-        # Подготавливаем данные для ответа
         trajectory_data = [{"x": float(x[i]), "y": float(y[i]), "dt": times[i] if i == 0 else times[i] - times[i-1]} for i in range(len(x))]
 
-        # Рассчитываем дополнительные параметры
         flight_time = times[-1]
         max_height = max(y)
         range_distance = x[-1]

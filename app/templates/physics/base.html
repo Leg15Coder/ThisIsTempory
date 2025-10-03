@@ -1,10 +1,373 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Галерея физических моделей</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            padding: 20px 0;
+        }
+
+        .model-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .model-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .model-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .model-card:hover .card-image img {
+            transform: scale(1.05);
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .card-content h3 {
+            font-size: 1.4em;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            line-height: 1.4;
+        }
+
+        .card-content p {
+            color: #7f8c8d;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .difficulty {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .difficulty.easy {
+            background: #e8f5e8;
+            color: #27ae60;
+        }
+
+        .difficulty.medium {
+            background: #fff3cd;
+            color: #f39c12;
+        }
+
+        .difficulty.hard {
+            background: #fde8e8;
+            color: #e74c3c;
+        }
+
+        .card-link {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .card-link:hover {
+            color: #2980b9;
+        }
+
+        .search-container {
+            max-width: 500px;
+            margin: 0 auto 40px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .category-filter {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .category-btn {
+            padding: 8px 20px;
+            border: 2px solid white;
+            background: transparent;
+            color: white;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .category-btn:hover,
+        .category-btn.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .no-results {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            grid-column: 1 / -1;
+            padding: 60px 20px;
+        }
+
+        @media (max-width: 768px) {
+            .models-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .card-content {
+                padding: 20px;
+            }
+        }
+
+        .model-card {
+            animation: fadeInUp 0.6s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Адаптивность для мобильных устройств */
+        @media (max-width: 480px) {
+            .model-card {
+                margin: 0 10px;
+            }
+
+            .card-content h3 {
+                font-size: 1.2em;
+            }
+
+            .search-box {
+                font-size: 1em;
+                padding: 12px 18px;
+            }
+        }
+
+        /* Эффект наведения для кнопок категорий */
+        .category-btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .category-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .category-btn:hover::before {
+            left: 100%;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Физические модели и симуляции</h1>
+        </div>
 
+        <div class="models-grid" id="modelsGrid"></div>
+    </div>
+
+    <script>
+        // Данные о моделях
+        const models = [
+            {
+                id: 'projectile-motion',
+                title: 'Движение тела, брошенного под углом к горизонту',
+                description: 'Моделирование траектории полёта тела с учётом вязкого трения и лобового сопротивления. Позволяет изучать влияние различных параметров на дальность и высоту полёта.',
+                image: '{{ url_for('static', path='img/projectile-motion.png') }}',
+                category: 'mechanics',
+                url: '/physics/M1'
+            },
+            {
+                id: 'solar-system',
+                title: 'Симуляция полёта космического корабля с Земли на Марс',
+                description: 'Симуляция полёта космического корабля с Земли на Марс.',
+                image: '{{ url_for('static', path='img/solar-system.png') }}',
+                category: 'mechanics',
+                url: '/physics/M3'
+            }
+        ];
+
+        // Функция для отрисовки карточек
+        function renderModels(filteredModels = models) {
+            const grid = document.getElementById('modelsGrid');
+            
+            if (filteredModels.length === 0) {
+                grid.innerHTML = '<div class="no-results">Модели не найдены. Попробуйте изменить поисковый запрос.</div>';
+                return;
+            }
+
+            // Заменяем проблемную строку в функции renderModels:
+            grid.innerHTML = filteredModels.map(model => `
+                <div class="model-card" data-category="${model.category}">
+                    <div class="card-image">
+                        <img src="${model.image}" alt="${model.title}"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="image-fallback" style="display: none;">
+                            <div class="fallback-content">
+                                <span style="font-size: 48px; margin-bottom: 10px;">📊</span>
+                                <span style="font-weight: bold; color: white;">Физическая модель</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <h3>${model.title}</h3>
+                        <p>${model.description}</p>
+                        <div class="card-meta">
+                            <a href="${model.url}" class="card-link">
+                                Открыть модель →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Добавляем обработчики клика на карточки
+            document.querySelectorAll('.model-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (!e.target.closest('.card-link')) {
+                        const link = card.querySelector('.card-link');
+                        if (link) {
+                            window.location.href = link.href;
+                        }
+                    }
+                });
+            });
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            renderModels();
+        });
+
+        // Обработка ошибок загрузки изображений
+        document.addEventListener('error', (e) => {
+            if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('card-image')) {
+                e.target.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.style.cssText = 'width: 100%; height: 100%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;';
+                fallback.textContent = '📊 Модель';
+                e.target.parentElement.appendChild(fallback);
+            }
+        }, true);
+    </script>
 </body>
 </html>

@@ -27,8 +27,12 @@ class MarsMissionRequest(BaseModel):  # В СИ
     velocity: float = 350
     landing_velocity: float = 350
     landing_mass: float = 10000
+
     include_atmosphere: bool = False
     bounded_overload: bool = False
+
+    safety_margin: float = 60
+    max_landing_velocity: float = 0.8
 
 
 class TrajectoryPoint(BaseModel):
@@ -124,18 +128,18 @@ class MarsMissionSimulator:
                 dm_dt = mass * acceleration / gases_velocity
                 acceleration = 0
 
-            altitude += min(velocity, target_velocity) * dt
+            altitude += velocity * dt
             t += dt
             mass -= dm_dt * dt
 
             self.trajectory.append(TrajectoryPoint(
                 x=0, y=altitude, z=0,
-                time=t, velocity=target_velocity,
+                time=t, velocity=abs(velocity),
                 mass=mass, phase=phase, fuel_consumption=dm_dt,
-                overload=acceleration
+                overload=abs(acceleration)
             ))
 
-        return mass, target_velocity, altitude
+        return mass, velocity, altitude
 
     def calculate_transfer_phase(self, initial_mass: float, initial_velocity: float):
         dt = 3600
@@ -237,7 +241,7 @@ class MarsMissionSimulator:
         velocity = approach_velocity
         mass = initial_mass
         min_velocity = self.request.landing_velocity
-        max_velocity = .8
+        max_velocity = self.request.max_landing_velocity
 
         rho0 = 0.025 if self.request.include_atmosphere else 0
         atmosphere_height = 100_000
@@ -290,9 +294,9 @@ class MarsMissionSimulator:
             if t - self.trajectory[-1].time > 5:
                 self.trajectory.append(TrajectoryPoint(
                     x=0, y=altitude, z=0,
-                    time=t, velocity=velocity,
+                    time=t, velocity=abs(velocity),
                     mass=mass, phase=phase, fuel_consumption=dm_dt,
-                    overload=acceleration
+                    overload=abs(acceleration)
                 ))
 
         self.trajectory.append(TrajectoryPoint(
@@ -303,10 +307,11 @@ class MarsMissionSimulator:
         ))
 
         if velocity > max_velocity * 64:
-            raise MissionFailException("Корабль разбился при посадке")
+            raise MissionFailException("Корабль разбился при посадке (не хватило топлива)")
 
         if velocity > max_velocity * 16:
-            raise MissionFailException("Корабль серьёзно пострадал при посадке")
+            raise MissionFailException("Корабль серьёзно пострадал при посадке (не хватило высоты торможения или "
+                                       "топлива)")
 
         return mass, velocity
 
@@ -320,7 +325,7 @@ class MarsMissionSimulator:
 
         required_height = (velocity ** 2 - min_velocity ** 2) / (2 * effective_acceleration)
 
-        safety_margin = 1.2
+        safety_margin = self.request.safety_margin / 100
 
         return required_height * safety_margin
 

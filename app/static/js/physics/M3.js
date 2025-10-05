@@ -576,7 +576,9 @@ async function startMission() {
         landing_velocity: parseFloat(document.getElementById('landing_velocity').value) || 350,
         landing_mass: parseFloat(document.getElementById('landing_mass').value) || 10000,
         include_atmosphere: document.getElementById('include_atmosphere').checked,
-        bounded_overload: document.getElementById('bounded_overload').checked
+        bounded_overload: document.getElementById('bounded_overload').checked,
+        safety_margin: parseFloat(document.getElementById('safety_margin').value) || 66,
+        max_landing_velocity: parseFloat(document.getElementById('max_landing_velocity').value) || 0.8,
     };
 
     try {

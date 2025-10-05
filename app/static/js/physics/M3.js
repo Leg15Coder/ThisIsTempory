@@ -539,6 +539,14 @@ class MarsMissionAnimation {
             updateStat('fuel-consumed', Math.round(this.stats.fuel_consumed).toLocaleString() + ' кг');
         }
 
+        if (this.stats.fuel_consumed_earth !== undefined) {
+            updateStat('fuel-consumed-earth', Math.round(this.stats.fuel_consumed_earth).toLocaleString() + ' кг');
+        }
+
+        if (this.stats.fuel_consumed_mars !== undefined) {
+            updateStat('fuel-consumed-mars', Math.round(this.stats.fuel_consumed_mars).toLocaleString() + ' кг');
+        }
+
         if (this.trajectory.length > 0) {
             const maxOverload = Math.max(...this.trajectory.map(p => Math.abs(p.overload || 0)));
             updateStat('max-acceleration', (maxOverload / 9.81).toFixed(1) + ' g');
@@ -579,6 +587,7 @@ async function startMission() {
         bounded_overload: document.getElementById('bounded_overload').checked,
         safety_margin: parseFloat(document.getElementById('safety_margin').value) || 66,
         max_landing_velocity: parseFloat(document.getElementById('max_landing_velocity').value) || 0.8,
+        max_dm_dt: parseFloat(document.getElementById('max_dm_dt').value) || 10,
     };
 
     try {

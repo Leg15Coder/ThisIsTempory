@@ -33,6 +33,7 @@ class MarsMissionRequest(BaseModel):  # В СИ
 
     safety_margin: float = 60
     max_landing_velocity: float = 0.8
+    max_dm_dt: float = 10
 
 
 class TrajectoryPoint(BaseModel):
@@ -50,6 +51,8 @@ class TrajectoryPoint(BaseModel):
 class MissionStats(BaseModel):
     total_time: float
     fuel_consumed: float
+    fuel_consumed_earth: float
+    fuel_consumed_mars: float
     arrival_velocity: float
     mars_start_pos: List[float]
 
@@ -116,7 +119,7 @@ class MarsMissionSimulator:
                 required_acceleration = (target_velocity - velocity) / dt
                 required_thrust = mass * (required_acceleration + g) + drag
 
-                max_possible_thrust = mass * 0.1 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
+                max_possible_thrust = mass * self.request.max_dm_dt / 100 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
 
                 actual_thrust = min(required_thrust, max_possible_thrust)
                 dm_dt = actual_thrust / gases_velocity
@@ -278,7 +281,7 @@ class MarsMissionSimulator:
                 required_acceleration = -(target_velocity - velocity) / dt
                 required_thrust = mass * (required_acceleration + g) + drag
 
-                max_possible_thrust = mass * 0.1 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
+                max_possible_thrust = mass * self.request.max_dm_dt / 100 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
 
                 actual_thrust = min(required_thrust, max_possible_thrust)
                 dm_dt = actual_thrust / gases_velocity
@@ -288,7 +291,7 @@ class MarsMissionSimulator:
             velocity += acceleration * dt
             altitude -= velocity * dt
             t += dt
-            dt *= 0.99999
+            dt *= 0.9999
             mass -= dm_dt * dt
 
             if t - self.trajectory[-1].time > 5:
@@ -316,7 +319,7 @@ class MarsMissionSimulator:
         return mass, velocity
 
     def calculate_engine_start_altitude(self, velocity: float, mass: float, gases_velocity: float, min_velocity: float):
-        max_thrust = mass * 0.1 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
+        max_thrust = mass * self.request.max_dm_dt / 100 * gases_velocity if not self.request.bounded_overload else 11 * g0 * mass
         max_acceleration = max_thrust / mass
 
         g_surface = G * M_MARS / R_MARS ** 2
@@ -347,6 +350,8 @@ class MarsMissionSimulator:
             stats = MissionStats(
                 total_time=self.trajectory[-1].time,
                 fuel_consumed=self.request.initial_mass - mass_after_landing,
+                fuel_consumed_earth=self.request.initial_mass - mass_after_launch,
+                fuel_consumed_mars=mass_after_launch - mass_after_landing,
                 arrival_velocity=v_landing,
                 mars_start_pos=mars_start_pos
             )

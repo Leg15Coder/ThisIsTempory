@@ -261,6 +261,21 @@ class ProjectileAnimation {
         this.stats = stats;
         this.step = stats.flight_time / 666;
         this.stats.is_vertical_throw = Math.abs(parseFloat(document.getElementById('angle').value) - 90) < 0.00001;
+
+        if (this.trajectoryData.length > 10000000) {
+            // Оценим коэффициент прореживания
+            const k = Math.ceil(this.trajectoryData.length * 2 / 10000000);
+
+            // Оставляем каждый k-й элемент + последний
+            this.trajectoryData = this.trajectoryData.filter((_, i, arr) =>
+                i % k === 0 || i === arr.length - 1
+            );
+
+            console.warn(
+                `Trajectory too long (${data.length} points). Reduced by factor ${k} → ${this.trajectoryData.length} points.`
+            );
+        }
+
         this.drawStaticElements();
         this.drawTrajectory();
     }

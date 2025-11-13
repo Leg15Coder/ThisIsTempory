@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Симуляция физического маятника (М5)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/physics.css') }}">
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #f5f7fa;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 16px;
+    }
+    .input-panel {
+      background: #ffffff;
+      border: 1px solid #e1e7f0;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .input-section {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .input-group label {
+      font-size: 13px;
+      margin-bottom: 4px;
+      font-weight: 500;
+      color: #2d3748;
+    }
+    .input-group input, .input-group select {
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .inline {
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .button-group {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .button-group button {
+      padding: 8px 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+    .animation-container {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .animation-controls {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .canvas-container {
+      display: flex;
+      justify-content: center;
+    }
+    .chart-container {
+      margin-top: 16px;
+      min-height: 280px;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    #infoPanel {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .info-label {
+      color: #4a5568;
+      font-weight: 500;
+    }
+    .info-value {
+      color: #2d3748;
+      font-family: 'Courier New', monospace;
+    }
+    #chart {
+      width: 100%;
+      height: 260px;
+    }
+    .btn-reset {
+      cursor: pointer;
+      background: #e53e3e;
+      color: white;
+    }
+    .btn-primary {
+      background: #3182ce;
+      color: white;
+    }
+    .btn-secondary {
+      background: #718096;
+      color: white;
+    }
+    .axis-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .axis-canvas-container {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .notification.error {
+      background: #e53e3e;
+    }
+    .notification.success {
+      background: #38a169;
+    }
+  </style>
+</head>
+<body>
+  <div id="notification" class="notification"></div>
+
+  <h1 style="margin:12px auto; max-width:1200px; color: #2d3748;">Симуляция физического маятника</h1>
+  <div class="container">
+    <div>
+      <div class="animation-container">
+        <h2 style="margin-top: 0; color: #2d3748;">Визуализация маятника</h2>
+        <div class="animation-controls">
+          <div>
+            <label for="animation-speed">Скорость анимации:</label>
+            <input type="range" min="0.1" max="2" step="0.05" value="1" id="animation-speed">
+            <span id="speed-value">1.0x</span>
+          </div>
+        </div>
+        <div class="canvas-container">
+          <canvas id="animationCanvas" width="600" height="450"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="chart"></canvas>
+        <div id="infoPanel">
+          <div class="info-row"><span class="info-label">Период колебаний:</span><span id="period-est" class="info-value">—</span></div>
+          <div class="info-row"><span class="info-label">Момент инерции (I):</span><span id="ipivot-val" class="info-value">—</span></div>
+          <div class="info-row"><span class="info-label">Расстояние до ЦМ (h):</span><span id="h-val" class="info-value">—</span></div>
+          <div class="info-row"><span class="info-label">Полная энергия:</span><span id="energy-val" class="info-value">—</span></div>
+          <div class="info-row"><span class="info-label">Кинетическая энергия:</span><span id="kinetic-energy" class="info-value">—</span></div>
+          <div class="info-row"><span class="info-label">Потенциальная энергия:</span><span id="potential-energy" class="info-value">—</span></div>
+          <div class="info-row"><span class="info-label">Макс. угол:</span><span id="max-angle" class="info-value">—</span></div>
+          <div class="info-row"><span class="info-label">Макс. скорость:</span><span id="max-velocity" class="info-value">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-panel">
+      <form id="pendulumForm">
+        <div class="input-section">
+          <div class="input-group">
+            <label for="mass">Масса (кг):</label>
+            <input type="number" step="any" id="mass" value="1.000" min="0.001">
+          </div>
+          <div class="input-group">
+            <label for="length">Геометрическая длина L (м):</label>
+            <input type="number" step="any" id="length" value="1.000" min="0.001">
+          </div>
+          <div class="input-group">
+            <label for="gravity">Ускорение g (м/с²):</label>
+            <input type="number" step="any" id="gravity" value="9.81" min="0.1">
+          </div>
+          <div class="input-group">
+            <label for="shape">Форма маятника:</label>
+            <div class="inline">
+              <select id="shape">
+                <option value="stick">Тонкий стержень</option>
+                <option value="disc">Диск</option>
+                <option value="rect">Прямоугольная пластина</option>
+                <option value="custom">Произвольная форма</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-group" id="custom-inertia-group">
+            <label for="inertia">I_cm (кг·м²):</label>
+            <input type="text" id="inertia" name="inertia" value="" readonly>
+          </div>
+
+          <div class="input-group">
+            <label for="friction">Коэффициент трения (кг·м²/с):</label>
+            <input type="number" step="any" id="friction" value="0.0000" min="0">
+          </div>
+
+          <div class="input-group">
+            <label for="theta0">Начальный угол (рад):</label>
+            <div class="inline">
+              <input type="text" id="theta0" value="0.200">
+              <label class="inline">
+                <input type="checkbox" id="manual-theta-toggle">
+                Ручной угол
+              </label>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="t_max">Длительность сегмента (с):</label>
+            <input type="number" step="any" id="t_max" value="32" min="1" max="100">
+          </div>
+
+          <div class="input-group">
+            <button type="button" id="toggleDriveBtn" style="margin-bottom: 5px;" class="btn-secondary">
+              Внешняя сила ▼
+            </button>
+            <div id="driveParams" style="display: none; padding-left: 10px; border-left: 2px solid #ccc; margin-bottom: 10px;">
+              <div class="input-group">
+                <label for="drive_amp">Амплитуда силы A (Н·м):</label>
+                <input type="number" step="any" id="drive_amp" value="0" min="0">
+              </div>
+              <div class="input-group">
+                <label for="drive_period">Период силы T (с):</label>
+                <input type="number" step="any" id="drive_period" value="0" min="0">
+              </div>
+              <div class="input-group">
+                <label for="drive_phase">Фаза φ (рад):</label>
+                <input type="number" step="any" id="drive_phase" value="0">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="axis-controls" id="axis-controls">
+          <label>Выберите точку вращения:</label>
+          <div class="axis-canvas-container">
+            <div>
+              <canvas id="shapePreviewCanvas" width="200" height="200" style="border:1px solid #ddd; display:block; margin: 8px 0 15px 0; background:#f8fafc;"></canvas>
+              <button type="button" class="btn-reset" id="resetAxisBtn">Сбросить ось</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button type="submit" class="btn-primary">Симулировать</button>
+          <button type="button" class="btn-secondary" id="pauseBtn">Пауза/Пуск</button>
+          <button type="button" class="btn-reset" id="resetBtn">Сброс</button>
+        </div>
+      </form>
+
+      <div id="draw-area-controls" style="display:none; margin-bottom: 10px;">
+        <div style="display: inline-block">
+          <label>Нарисуйте фигуру:</label>
+          <canvas id="drawCanvas" width="300" height="300" style="border:1px solid #ddd; display:block; margin: 8px 0 15px 0; background:#f8fafc;"></canvas>
+          <button type="button" class="btn-reset" id="resetDrawBtn">Сбросить фигуру</button>
+        </div>
+        <div style="display: inline-block">
+          <label>Выберите ось подвеса:</label>
+          <canvas id="axisCanvas" width="300" height="300" style="border:1px solid #ddd; display:block; margin: 8px 0 15px 0; background:#f8fafc;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="{{ url_for('static', path='/js/physics/M5.js') }}"></script>
+</body>
+</html>

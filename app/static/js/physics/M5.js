@@ -41,6 +41,7 @@ let playbackSpeed = 3.0;
 let pxPerMeter = 100;
 let tileIndex = 0;
 let customBaseTheta = 0;
+let thetaDiff = 0;
 
 let requestInFlight = false;
 
@@ -57,6 +58,50 @@ let globalTime = 0;
 let lastTs = 0;
 
 let waitingForData = false;
+
+function setupCanvasScaling() {
+    const canvases = [
+        'animationCanvas',
+        'shapePreviewCanvas',
+        'drawCanvas',
+        'axisCanvas'
+    ];
+
+    canvases.forEach(canvasId => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        if (!canvas.dataset.originalWidth) {
+            canvas.dataset.originalWidth = canvas.width;
+            canvas.dataset.originalHeight = canvas.height;
+        }
+
+        const container = canvas.parentElement;
+        const rect = container.getBoundingClientRect();
+
+        const dpr = window.devicePixelRatio || 1;
+        const displayWidth = Math.floor(rect.width * dpr);
+        const displayHeight = Math.floor(rect.height * dpr);
+
+        if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+            canvas.width = displayWidth;
+            canvas.height = displayHeight;
+
+            if (canvasId === 'animationCanvas') {
+                const shapeType = shapeSelect.value;
+                const length = parseFloat(document.getElementById('length').value);
+                const currentTheta = animationData.theta[currentFrame] || 0;
+                drawPendulum(currentTheta, shapeType, length);
+            } else if (canvasId === 'shapePreviewCanvas') {
+                drawShapePreview();
+            } else if (canvasId === 'drawCanvas') {
+                redrawCanvas(canvas, customShape);
+            } else if (canvasId === 'axisCanvas') {
+                redrawCanvas(canvas, customShape, axisPoint);
+            }
+        }
+    });
+}
 
 function showNotification(message, type = 'error') {
     const notification = document.getElementById('notification');
@@ -175,7 +220,7 @@ function chartReset() {
 }
 
 function chartAppend(x, theta, energy) {
-    chartBufTheta.push({ x, y: theta });
+    chartBufTheta.push({ x, y: theta + thetaDiff });
     chartBufEnergy.push({ x, y: energy });
     if (chartBufTheta[chartBufTheta.length - 1].x - chartBufTheta[0].x > tMaxInput.value) chartBufTheta.shift();
     if (chartBufEnergy[chartBufEnergy.length - 1].x - chartBufEnergy[0].x > tMaxInput.value) chartBufEnergy.shift();
@@ -233,7 +278,7 @@ function autoParamsForShapeWithAxis(m, L, shape, axisPoint) {
         const IcmFull = (1 / 12) * m * L * L;
         const defaultH = L / 2;
         if (!axisPoint) {
-            return { Icm: IcmFull, h: defaultH, theta: Math.PI / 6 };
+            return { Icm: IcmFull, h: defaultH, theta: 0 };
         }
         const scale = 80;
         const axisXMeters = axisPoint.x / scale;
@@ -251,7 +296,7 @@ function autoParamsForShapeWithAxis(m, L, shape, axisPoint) {
         const IcmFull = 0.5 * m * R * R;
         const defaultH = R;
         if (!axisPoint) {
-            return { Icm: IcmFull, h: defaultH, theta: Math.PI / 2 };
+            return { Icm: IcmFull, h: defaultH, theta: 0 };
         }
         const scale = 80;
         const axisXMeters = axisPoint.x / scale;
@@ -269,7 +314,7 @@ function autoParamsForShapeWithAxis(m, L, shape, axisPoint) {
         const IcmFull = (1 / 12) * m * (w * w + L * L);
         const defaultH = L / 2;
         if (!axisPoint) {
-            return { Icm: IcmFull, h: defaultH, theta: Math.PI / 2 };
+            return { Icm: IcmFull, h: defaultH, theta: 0 };
         }
         const scale = 80;
         const axisXMeters = axisPoint.x / scale;
@@ -325,7 +370,6 @@ function buildParamsForTile(tileIdx) {
             if (manualThetaToggle.checked) {
                 theta0 = parseFloat(String(theta0Input.value).replace(',', '.'));
                 if (!isFinite(theta0)) throw new Error('Некорректный начальный угол');
-                if (theta0 > Math.PI || theta0 < -Math.PI) theta0 = ((theta0 + Math.PI) % (2 * Math.PI)) - Math.PI;
             } else {
                 const shape = shapeSelect.value;
                 if (shape !== 'custom') {
@@ -366,6 +410,11 @@ function buildParamsForTile(tileIdx) {
 
         if (!Icm || Icm <= 0 || !isFinite(Icm)) throw new Error('Не удалось рассчитать момент инерции');
         if (!h || h <= 0 || !isFinite(h)) throw new Error('Не удалось рассчитать расстояние до центра масс');
+        if (theta0 > Math.PI || theta0 < -Math.PI) {
+            let theta1 = ((theta0 + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+            thetaDiff = theta0 - theta1 + thetaDiff;
+            theta0 = theta1;
+        }
 
         const drive_amp = parseFloat(driveAmpInput.value) || 0;
         const drive_period = parseFloat(drivePeriodInput.value) || 0;
@@ -482,9 +531,14 @@ function drawPendulum(theta, shapeType, length) {
     const width = canvas.width, height = canvas.height;
     const hMeters = animationData.h || (length / 2);
     const Lmax = Math.max(length, hMeters);
-    const margin = 80;
+
+    const availableHeight = height * 0.7;
+    pxPerMeter = availableHeight / (Lmax * 1.5);
+
+    const margin = width * 0.1;
     const pivotX = width / 2;
-    const pivotY = Math.min(120, Math.max(60, height / 2 - Lmax * pxPerMeter - margin));
+    const pivotY = height * 0.2;
+
     ctx.save();
     ctx.strokeStyle = 'rgba(0,0,0,0.2)';
     ctx.lineWidth = 1;
@@ -497,6 +551,10 @@ function drawPendulum(theta, shapeType, length) {
     ctx.translate(pivotX, pivotY);
     ctx.rotate(theta + customBaseTheta);
     if (shapeType === "custom" && customCachePath) {
+        ctx.save();
+        const scaleFactor = pxPerMeter / 100;
+        ctx.scale(scaleFactor, scaleFactor);
+
         ctx.fillStyle = "#55b7ff";
         ctx.globalAlpha = 0.85;
         ctx.fill(customCachePath);
@@ -504,6 +562,7 @@ function drawPendulum(theta, shapeType, length) {
         ctx.lineWidth = 3;
         ctx.strokeStyle = "#007bff";
         ctx.stroke(customCachePath);
+        ctx.restore();
         ctx.beginPath();
         ctx.arc(0, 0, 6, 0, 2 * Math.PI);
         ctx.fillStyle = "#f093fb";
@@ -527,7 +586,7 @@ function drawStandardShape(ctx, shapeType, length, axisPoint) {
         const axisOffsetY = axisPoint ? axisPoint.y * (scale / 80) : 0;
 
         ctx.strokeStyle = "#007bff";
-        ctx.lineWidth = 10;
+        ctx.lineWidth = Math.max(3, scale / 10);
         ctx.beginPath();
         ctx.moveTo(-axisOffsetX, -axisOffsetY);
         ctx.lineTo(-axisOffsetX, Lpx - axisOffsetY);
@@ -769,6 +828,7 @@ function prefetchNextTile() {
 }
 
 window.addEventListener('load', () => {
+    setupCanvasScaling();
     enableFreeAngle(theta0Input);
     inertiaInput.disabled = true;
     setCustomControlsVisibility(shapeSelect.value === "custom");
@@ -777,6 +837,10 @@ window.addEventListener('load', () => {
     redrawCanvas(axisCanvas, customShape);
     initCharts();
     drawShapePreview();
+});
+
+window.addEventListener('resize', () => {
+    setupCanvasScaling();
 });
 
 toggleDriveBtn.addEventListener('click', () => {

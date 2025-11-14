@@ -290,7 +290,7 @@
         const models = [
             {
                 id: 'projectile-motion',
-                title: 'Движение тела, брошенного под углом к горизонту',
+                title: 'Бросок под углом к горизонту',
                 description: 'Моделирование траектории полёта тела с учётом вязкого трения и лобового сопротивления. Позволяет изучать влияние различных параметров на дальность и высоту полёта.',
                 image: '{{ url_for('static', path='img/projectile-motion.png') }}',
                 category: 'mechanics',
@@ -303,6 +303,14 @@
                 image: '{{ url_for('static', path='img/solar-system.png') }}',
                 category: 'mechanics',
                 url: '/physics/M3'
+            },
+            {
+                id: 'physical-pendulum',
+                title: 'Физический Маятник',
+                description: 'Исследование физического маятника подвешенного в поле силы тяжести при наличии внешней силы.',
+                image: '{{ url_for('static', path='img/physical-pendulum.png') }}',
+                category: 'mechanics',
+                url: '/physics/M5'
             }
         ];
 

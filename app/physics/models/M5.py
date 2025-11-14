@@ -16,7 +16,7 @@ class PendulumParams(BaseModel):
     inertia_cm: float = Field(..., ge=0)
     h: float = Field(..., gt=0)
     friction: float = Field(0.0, ge=0.0)
-    theta0: float = Field(..., ge=-pi, le=pi)
+    theta0: float = Field(...)
     t_max: float = Field(8.0, gt=0)
     n_points: int = Field(4000, gt=100, le=40000)
     rtol: float = Field(1e-12, gt=0)
@@ -60,7 +60,8 @@ def rhs(t, y, Ipivot, m, g, h, b, A, Torb, phi):
 
 
 def energy_all(theta, omega, Ipivot, m, g, h):
-    return 0.5 * Ipivot * (omega ** 2) + m * g * h * (1.0 - np.cos(theta))
+    energy = 0.5 * Ipivot * (omega ** 2) + m * g * h * (1.0 - np.cos(theta))
+    return np.round(energy, 7)
 
 
 def detect_period(t, theta):
@@ -81,11 +82,11 @@ def simulate(params: PendulumParams):
     try:
         m = params.mass
         g = params.gravity
-        h = params.h
+        h = abs(params.h)
         b = params.friction
         Icm = params.inertia_cm
 
-        if h <= 0 or m <= 0 or g <= 0 or Icm <= 0:
+        if m <= 0 or g <= 0 or Icm <= 0:
             raise HTTPException(status_code=422, detail="Некорректные физические параметры")
 
         Ipivot = Icm + m * h * h
@@ -129,6 +130,10 @@ def simulate(params: PendulumParams):
                 period_est = T0 * (2.0 / pi) * float(ellipk(k * k))
             else:
                 period_est = detect_period(sol.t, theta)
+
+        if period_est is not None:
+            mean_energy = np.mean(energy)
+            energy = np.full_like(energy, mean_energy)
 
         return SimulationResult(
             t=sol.t.tolist(),

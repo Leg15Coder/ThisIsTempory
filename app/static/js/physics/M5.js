@@ -283,8 +283,8 @@ function autoParamsForShapeWithAxis(m, L, shape, axisPoint) {
         const scale = 80;
         const axisXMeters = axisPoint.x / scale;
         const axisYMeters = axisPoint.y / scale;
-        const Icm = IcmFull + m * axisYMeters * axisYMeters;
         const h = Math.sqrt(axisXMeters * axisXMeters + axisYMeters * axisYMeters);
+        const Icm = IcmFull;
         const cmY = L / 2;
         const cmOffsetX = 0 - axisXMeters;
         const cmOffsetY = cmY - axisYMeters;
@@ -302,7 +302,7 @@ function autoParamsForShapeWithAxis(m, L, shape, axisPoint) {
         const axisXMeters = axisPoint.x / scale;
         const axisYMeters = axisPoint.y / scale;
         const distance = Math.sqrt(axisXMeters * axisXMeters + axisYMeters * axisYMeters);
-        const Icm = IcmFull + m * distance * distance;
+        const Icm = IcmFull;
         const h = distance;
         const cmOffsetX = 0 - axisXMeters;
         const cmOffsetY = 0 - axisYMeters;
@@ -320,7 +320,7 @@ function autoParamsForShapeWithAxis(m, L, shape, axisPoint) {
         const axisXMeters = axisPoint.x / scale;
         const axisYMeters = axisPoint.y / scale;
         const distance = Math.sqrt(axisXMeters * axisXMeters + axisYMeters * axisYMeters);
-        const Icm = IcmFull + m * distance * distance;
+        const Icm = IcmFull;
         const h = distance;
         const cmOffsetX = 0 - axisXMeters;
         const cmOffsetY = L / 2 - axisYMeters;
@@ -428,7 +428,7 @@ function buildParamsForTile(tileIdx) {
             friction: b,
             theta0,
             t_max,
-            n_points: 4000,
+            n_points: 5000,
             rtol: 1e-12,
             atol: 1e-14,
             method: "DOP853",

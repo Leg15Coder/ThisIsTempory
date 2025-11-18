@@ -58,46 +58,75 @@ let globalTime = 0;
 let lastTs = 0;
 
 let waitingForData = false;
+let resizeTimeout;
+const RESIZE_DELAY = 250;
 
-function setupCanvasScaling() {
-    const canvases = [
-        'animationCanvas',
-        'shapePreviewCanvas',
-        'drawCanvas',
-        'axisCanvas'
-    ];
+function setupCanvasScaling(immediate = false) {
+    if (!immediate) {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => setupCanvasScaling(true), RESIZE_DELAY);
+        return;
+    }
 
-    canvases.forEach(canvasId => {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-
-        if (!canvas.dataset.originalWidth) {
-            canvas.dataset.originalWidth = canvas.width;
-            canvas.dataset.originalHeight = canvas.height;
-        }
-
-        const container = canvas.parentElement;
-        const rect = container.getBoundingClientRect();
-
-        const dpr = window.devicePixelRatio || 1;
-        const displayWidth = Math.floor(rect.width * dpr);
-        const displayHeight = Math.floor(rect.height * dpr);
-
-        if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-            canvas.width = displayWidth;
-            canvas.height = displayHeight;
-
-            if (canvasId === 'animationCanvas') {
+    const canvasConfigs = [
+        {
+            id: 'animationCanvas',
+            defaultWidth: 600,
+            defaultHeight: 450,
+            redraw: () => {
                 const shapeType = shapeSelect.value;
                 const length = parseFloat(document.getElementById('length').value);
                 const currentTheta = animationData.theta[currentFrame] || 0;
                 drawPendulum(currentTheta, shapeType, length);
-            } else if (canvasId === 'shapePreviewCanvas') {
-                drawShapePreview();
-            } else if (canvasId === 'drawCanvas') {
-                redrawCanvas(canvas, customShape);
-            } else if (canvasId === 'axisCanvas') {
-                redrawCanvas(canvas, customShape, axisPoint);
+            }
+        },
+        {
+            id: 'shapePreviewCanvas',
+            defaultWidth: 200,
+            defaultHeight: 200,
+            redraw: drawShapePreview
+        },
+        {
+            id: 'drawCanvas',
+            defaultWidth: 300,
+            defaultHeight: 300,
+            redraw: () => redrawCanvas(document.getElementById('drawCanvas'), customShape)
+        },
+        {
+            id: 'axisCanvas',
+            defaultWidth: 300,
+            defaultHeight: 300,
+            redraw: () => redrawCanvas(document.getElementById('axisCanvas'), customShape, axisPoint)
+        }
+    ];
+
+    canvasConfigs.forEach(config => {
+        const canvas = document.getElementById(config.id);
+        if (!canvas) return;
+
+        let targetWidth, targetHeight;
+
+        if (config.id === 'animationCanvas') {
+            const container = canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            targetWidth = Math.floor(rect.width);
+            targetHeight = Math.floor(rect.height);
+        } else {
+            targetWidth = config.defaultWidth;
+            targetHeight = config.defaultHeight;
+        }
+
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        canvas.style.width = targetWidth + 'px';
+        canvas.style.height = targetHeight + 'px';
+
+        if (config.redraw) {
+            try {
+                config.redraw();
+            } catch (error) {
+                console.error(`Ошибка при перерисовке ${config.id}:`, error);
             }
         }
     });
@@ -526,40 +555,39 @@ function redrawCanvas(canvas, points, axis = null) {
 function drawPendulum(theta, shapeType, length) {
     const canvas = document.getElementById('animationCanvas');
     if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     const width = canvas.width, height = canvas.height;
-    const hMeters = animationData.h || (length / 2);
-    const Lmax = Math.max(length, hMeters);
+    const pivotX = width / 2;
+    const pivotY = height * 0.39;
 
     const availableHeight = height * 0.7;
-    pxPerMeter = availableHeight / (Lmax * 1.5);
-
-    const margin = width * 0.1;
-    const pivotX = width / 2;
-    const pivotY = height * 0.2;
+    pxPerMeter = availableHeight / 2;
 
     ctx.save();
     ctx.strokeStyle = 'rgba(0,0,0,0.2)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(pivotX, pivotY);
-    ctx.lineTo(pivotX, pivotY + (Lmax * pxPerMeter + 150));
+    ctx.lineTo(pivotX, pivotY + 300);
     ctx.stroke();
     ctx.restore();
+
     ctx.save();
     ctx.translate(pivotX, pivotY);
     ctx.rotate(theta + customBaseTheta);
+
     if (shapeType === "custom" && customCachePath) {
         ctx.save();
-        const scaleFactor = pxPerMeter / 100;
-        ctx.scale(scaleFactor, scaleFactor);
+        ctx.scale(pxPerMeter, pxPerMeter);
 
         ctx.fillStyle = "#55b7ff";
         ctx.globalAlpha = 0.85;
         ctx.fill(customCachePath);
         ctx.globalAlpha = 1;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2 / pxPerMeter;
         ctx.strokeStyle = "#007bff";
         ctx.stroke(customCachePath);
         ctx.restore();
@@ -567,8 +595,9 @@ function drawPendulum(theta, shapeType, length) {
         ctx.arc(0, 0, 6, 0, 2 * Math.PI);
         ctx.fillStyle = "#f093fb";
         ctx.fill();
+
         ctx.beginPath();
-        ctx.arc(customCacheCx, customCacheCy, 5, 0, 2 * Math.PI);
+        ctx.arc(customCacheCx * pxPerMeter, customCacheCy * pxPerMeter, 5, 0, 2 * Math.PI);
         ctx.fillStyle = "#45b7d1";
         ctx.fill();
     } else {
@@ -674,19 +703,51 @@ function rebuildCustomCache() {
     customCachePath = null;
     customCacheCx = 0;
     customCacheCy = 0;
+
     if (!(customShape.length > 2 && axisPoint)) return;
-    const p = new Path2D();
-    p.moveTo(customShape[0][0] - axisPoint[0], customShape[0][1] - axisPoint[1]);
-    for (let i = 1; i < customShape.length; i++) {
-        p.lineTo(customShape[i][0] - axisPoint[0], customShape[i][1] - axisPoint[1]);
-    }
-    p.closePath();
-    customCachePath = p;
-    const m = parseFloat(document.getElementById('mass').value);
-    const r = computeCustomIcmAndH(m, customShape, axisPoint);
-    if (r) {
-        customCacheCx = r.Cx || 0;
-        customCacheCy = r.Cy || 0;
+
+    try {
+        const p = new Path2D();
+
+        const scaleToMeters = 0.01;
+
+        const axisX = axisPoint[0];
+        const axisY = axisPoint[1];
+
+        p.moveTo(
+            (customShape[0][0] - axisX) * scaleToMeters,
+            (customShape[0][1] - axisY) * scaleToMeters
+        );
+
+        for (let i = 1; i < customShape.length; i++) {
+            p.lineTo(
+                (customShape[i][0] - axisX) * scaleToMeters,
+                (customShape[i][1] - axisY) * scaleToMeters
+            );
+        }
+        p.closePath();
+        customCachePath = p;
+
+        const m = parseFloat(document.getElementById('mass').value);
+        const pointsInMeters = customShape.map(point => [
+            (point[0] - axisX) * scaleToMeters,
+            (point[1] - axisY) * scaleToMeters
+        ]);
+
+        const r = computeCustomIcmAndH(m, pointsInMeters, [0, 0]);
+        if (r && r.Cx !== null && r.Cy !== null) {
+            customCacheCx = r.Cx;
+            customCacheCy = r.Cy;
+        }
+
+        console.log('Custom cache rebuilt:', {
+            points: customShape.length,
+            axis: axisPoint,
+            centerMass: { x: customCacheCx, y: customCacheCy }
+        });
+
+    } catch (error) {
+        console.error('Ошибка при создании cache:', error);
     }
 }
 
@@ -828,7 +889,7 @@ function prefetchNextTile() {
 }
 
 window.addEventListener('load', () => {
-    setupCanvasScaling();
+    setupCanvasScaling(true);
     enableFreeAngle(theta0Input);
     inertiaInput.disabled = true;
     setCustomControlsVisibility(shapeSelect.value === "custom");
@@ -840,7 +901,7 @@ window.addEventListener('load', () => {
 });
 
 window.addEventListener('resize', () => {
-    setupCanvasScaling();
+    setupCanvasScaling(false);
 });
 
 toggleDriveBtn.addEventListener('click', () => {
@@ -947,6 +1008,17 @@ document.getElementById('resetBtn').addEventListener('click', function () {
 
 document.getElementById('pendulumForm').addEventListener('submit', async function (event) {
     event.preventDefault();
+
+        if (shapeSelect.value === "custom") {
+        if (customShape.length < 3) {
+            showNotification('Для произвольной формы нарисуйте фигуру (двойной клик для завершения)');
+            return;
+        }
+        if (!axisPoint) {
+            showNotification('Для произвольной формы выберите точку вращения на правом canvas');
+            return;
+        }
+    }
 
     try {
         animationPaused = false;

@@ -70,7 +70,7 @@
           </div>
 
           <div class="input-group" id="custom-inertia-group">
-            <label for="inertia">I_cm (кг·м²):</label>
+            <label for="inertia">I (относ. ц.м., кг·м²):</label>
             <input type="text" id="inertia" name="inertia" value="" readonly>
           </div>
 
@@ -134,12 +134,12 @@
       </form>
 
       <div id="draw-area-controls" style="display:none; margin-bottom: 10px;">
-        <div style="display: inline-block">
+        <div style="display: inline-block; width: 300px; height: 300px;">
           <label>Нарисуйте фигуру:</label>
           <canvas id="drawCanvas" width="300" height="300" style="border:1px solid #ddd; display:block; margin: 8px 0 15px 0; background:#f8fafc;"></canvas>
           <button type="button" class="btn-reset" id="resetDrawBtn">Сбросить фигуру</button>
         </div>
-        <div style="display: inline-block">
+        <div style="display: inline-block; width: 300px; height: 300px;">
           <label>Выберите ось подвеса:</label>
           <canvas id="axisCanvas" width="300" height="300" style="border:1px solid #ddd; display:block; margin: 8px 0 15px 0; background:#f8fafc;"></canvas>
         </div>

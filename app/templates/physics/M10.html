@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧊 3D Спиновая система куба</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/physics.css') }}">
+</head>
+<body>
+    <div class="container">
+      <h1>🧊 3D Спиновая система куба</h1>
+
+      <div id="status" class="status-line idle">
+        ⏸️ Режим ожидания
+      </div>
+    <div style="display: flex;">
+
+      <div class="visualization animation-container">
+        <h3>📊 Визуализация системы (2D проекция)</h3>
+        <p style="text-align: center; color: var(--color-accent-2); font-size: 0.9em;">
+          Каждый пиксель = один столбец спинов в 3D кубе. <strong>Цвет</strong> показывает соотношение против поля (красный) и по полю (синий).<br>
+          Стрелка показывает среднее направление спинов в столбце.
+        </p>
+        <div class="canvas-container">
+          <canvas id="canvas" style="min-height: 60%; min-width: 60%; align-content: center;"></canvas>
+        </div>
+        <div class="legend real-time-data">
+          <div class="real-time-stats">
+            <div class="legend-item">
+              <div class="legend-color" style="background: rgb(255, 0, 0);"></div>
+              <div class="legend-text">Спины против поля - красный</div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: rgb(0, 0, 255);"></div>
+              <div class="legend-text">Спины по полю - синий</div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: linear-gradient(to left top, rgb(255, 0, 0), rgb(0, 0, 255));"></div>
+              <div class="legend-text">Смешанное состояние - градиент</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-panel mission-control">
+        <div class="input-section">
+          <h3>⚙️ Параметры системы</h3>
+          <div class="input-group">
+            <div class="input-group inline">
+              <label for="temperature">Температура (K):</label>
+              <input type="range" id="temperature" min="1" max="800" step="1" value="300">
+              <span class="value-display" id="tempValue">300 K</span>
+            </div>
+            <div class="input-group inline">
+              <label for="fieldStrength">Магнитное поле (T):</label>
+              <input type="range" id="fieldStrength" min="-200" max="200" step="0.5" value="0">
+              <span class="value-display" id="fieldValue">0.0 T</span>
+            </div>
+            <div class="input-group inline">
+              <label for="cubeSize">Размер сетки:</label>
+              <input type="number" id="cubeSize" min="1" max="10000" value="8">
+              <span class="value-display" id="sizeValue">8×8×8</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-section">
+          <h3>🧲 Направление магнитного поля</h3>
+          <div class="input-group">
+            <div class="input-group">
+              <!--
+              <label for="fieldAngle">Угол поля (не используется):</label>
+              <input type="range" id="fieldAngle" min="0" max="360" step="1" value="0" disabled>
+              <span class="value-display" id="angleValue">0°</span>
+              -->
+            </div>
+          </div>
+          <div class="axis-controls">
+            <div class="axis-canvas-container">
+              <div class="field-direction-text">Направление поля:</div>
+              <div class="field-direction-arrow" id="fieldArrow" style="font-size:36px; font-weight:700; margin-top:6px;">·</div>
+              <div style="margin-top:8px;">
+                <button id="resetFieldBtn" class="btn-reset" onclick="resetField()">Сбросить поле в 0</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-section">
+          <h3>⏱️ Скорость анимации</h3>
+          <div class="input-group">
+            <div class="input-group inline">
+              <label for="framePause">Пауза между кадрами (мс):</label>
+              <input type="number" id="framePause" min="0" max="5000" value="100">
+              <span class="value-display" id="pauseValue">100 мс</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-section">
+          <h3>🎮 Управление</h3>
+          <div class="button-group">
+            <button id="startBtn" class="btn-primary" onclick="startSimulation()">▶️ Запустить</button>
+            <button id="pauseBtn" class="btn-secondary" onclick="togglePause()" disabled>⏸️ Пауза</button>
+            <button id="resetBtn" class="btn-reset" onclick="resetSimulation()">🔄 Сброс</button>
+          </div>
+          <div class="step-counter">
+            Шаг: <span id="stepCounter">0</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+      <div class="results-panel stats-panel">
+        <h3>📈 Статистика системы</h3>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-label">Энергия (в условных единицах)</div>
+            <div class="stat-value" id="energyValue">-</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Намагниченность</div>
+            <div class="stat-value" id="magnetizationValue">-</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Температура</div>
+            <div class="stat-value" id="tempStatValue">-</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Поле</div>
+            <div class="stat-value" id="fieldStatValue">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', path='/js/physics/M10.js') }}" defer></script>
+</body>
+</html>
+

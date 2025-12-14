@@ -271,6 +271,7 @@ button:active {
 
 .visualization {
     margin-bottom: 30px;
+    min-width: 50%;
 }
 
 .animation-controls {
@@ -406,4 +407,151 @@ button:active {
 }
 .notification.success {
   background: #38a169;
+}
+
+/* Общие вспомогательные классы */
+
+.value-display {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #4a5568;
+  min-width: 60px;
+}
+
+/* Панель управления (mission control) */
+
+.mission-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+/* Блоки ввода (input-panel / input-section / input-group уже частично описаны) */
+
+.input-panel {
+  background: #f8f9fa;
+  padding: 20px;
+  margin: 10px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.input-section {
+  flex: 1 1 220px;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+.input-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-group.inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Индикатор статуса */
+
+.status-line {
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.status-line.idle {
+  background: #edf2f7;
+  color: #4a5568;
+}
+
+.status-line.running {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.status-line.paused {
+  background: #fefcbf;
+  color: #744210;
+}
+
+/* Направление поля */
+
+.axis-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.axis-canvas-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.field-direction-text {
+  font-size: 13px;
+  color: #4a5568;
+}
+
+.field-direction-arrow {
+  font-size: 20px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf2f7;
+  color: #2b6cb0;
+  min-width: 32px;
+  text-align: center;
+}
+
+.step-counter {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #4a5568;
+}
+
+#canvas {
+  display: block;
+  max-width: 100%;
+}
+
+.legend {
+  margin-top: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #2d3748;
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.stats-panel {
+  margin-top: 20px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
 }

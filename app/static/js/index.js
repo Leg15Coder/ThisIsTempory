@@ -22,7 +22,7 @@ function openModal(id) {
         quest_card.classList.remove("new");
     }
 
-    fetch(`/quest/${id}`)
+    fetch(`/quest-app/quest/${id}`)
         .then(res => res.text())
         .then(html => {
             modal.innerHTML = html;
@@ -131,7 +131,7 @@ resetFiltersBtn.addEventListener('click', function() {
 });
 
 function fetchProgress(questId) {
-    fetch(`/quest/${questId}/progress`)
+    fetch(`/quest-app/quest/${questId}/progress`)
         .then(response => response.json())
         .then(data => updateProgress(data.progress, data.total, data.completed));
 }
@@ -155,7 +155,7 @@ function updateProgress(percent, total, completed) {
 }
 
 function updateCheckboxSubtask(questId, subtaskId, completed) {
-    fetch(`/subtask/${subtaskId}/checkbox`, {
+    fetch(`/quest-app/subtask/${subtaskId}/checkbox`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ function updateCheckboxSubtask(questId, subtaskId, completed) {
 }
 
 function updateNumericSubtask(questId, subtaskId, current) {
-    fetch(`/subtask/${subtaskId}/numeric`, {
+    fetch(`/quest-app/subtask/${subtaskId}/numeric`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

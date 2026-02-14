@@ -142,9 +142,6 @@ class Spin3DSimulator:
         T_norm = self.temperature_to_normalized(self.temperature_K)
         num_mc_updates = max(1, int(T_norm * self.beta))
 
-        if self.size >= 100:
-            num_mc_updates = max(1, num_mc_updates // 4)
-
         for _ in range(num_mc_updates):
             self.metropolis_step()
 

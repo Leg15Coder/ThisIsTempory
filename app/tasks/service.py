@@ -12,24 +12,40 @@ from app.tasks.database import (
 class QuestService:
     """Сервис для работы с квестами"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, user_id: Optional[int] = None):
         self.db = db
+        self.user_id = user_id
+
+    def _get_user_filter(self):
+        """Возвращает фильтр для квестов текущего пользователя"""
+        if self.user_id is None:
+            return Quest.id.is_(None)
+        return Quest.user_id == self.user_id
 
     def get_quest_by_id(self, quest_id: int) -> Optional[Quest]:
-        """Получить квест по ID"""
-        return self.db.query(Quest).filter(Quest.id == quest_id).first()
+        """Получить квест по ID (только для текущего пользователя)"""
+        return self.db.query(Quest).filter(
+            Quest.id == quest_id,
+            self._get_user_filter()
+        ).first()
 
     def get_active_quests(self) -> list[type[Quest]]:
-        """Получить все активные квесты"""
-        return self.db.query(Quest).filter(Quest.status == QuestStatus.active).all()
+        """Получить все активные квесты текущего пользователя"""
+        return self.db.query(Quest).filter(
+            Quest.status == QuestStatus.active,
+            self._get_user_filter()
+        ).all()
 
     def get_archived_quests(self) -> list[type[Quest]]:
-        """Получить все архивные квесты"""
-        return self.db.query(Quest).filter(Quest.status != QuestStatus.active).all()
+        """Получить все архивные квесты текущего пользователя"""
+        return self.db.query(Quest).filter(
+            Quest.status != QuestStatus.active,
+            self._get_user_filter()
+        ).all()
 
     def get_all_quests(self) -> list[type[Quest]]:
-        """Получить все квесты"""
-        return self.db.query(Quest).all()
+        """Получить все квесты текущего пользователя"""
+        return self.db.query(Quest).filter(self._get_user_filter()).all()
 
     def create_quest(
         self,
@@ -42,7 +58,10 @@ class QuestService:
         parent_ids: Optional[List[int]] = None,
         subtasks_data: Optional[List[Dict[str, Any]]] = None
     ) -> Quest:
-        """Создать новый квест"""
+        """Создать новый квест для текущего пользователя"""
+        if self.user_id is None:
+            raise ValueError("User ID is required to create a quest")
+
         quest = Quest(
             title=title,
             author=author,
@@ -50,13 +69,17 @@ class QuestService:
             deadline=deadline,
             created=datetime.now(),
             rarity=rarity,
-            cost=cost
+            cost=cost,
+            user_id=self.user_id
         )
         self.db.add(quest)
         self.db.flush()
 
         if parent_ids:
-            parents = self.db.query(Quest).filter(Quest.id.in_(parent_ids)).all()
+            parents = self.db.query(Quest).filter(
+                Quest.id.in_(parent_ids),
+                self._get_user_filter()
+            ).all()
             quest.parents.extend(parents)
 
             # Если все родители завершены - квест активен
@@ -286,4 +309,3 @@ class SubtaskService:
             "total": total_weight,
             "completed": completed_weight
         }
-

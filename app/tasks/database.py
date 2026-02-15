@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
-DATABASE_URL = str()
 
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -115,6 +114,9 @@ class Quest(Base):
     status = Column(quest_status_enum, default=QuestStatus.inactive)
     scope = Column(String)
     is_new = Column(Boolean, default=True)
+
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    user = relationship("User", back_populates="quests")
 
     children = relationship(
         "Quest",
@@ -224,4 +226,8 @@ class QuestGenerator(Base):
         db.commit()
 
 
-Base.metadata.create_all(bind=engine)
+try:
+    import app.auth.models  # noqa: F401
+except Exception as e:
+    print('⚠️ Не удалось импортировать app.auth.models при создании таблиц:', e)
+print('✅ Модели загружены в metadata (проверка завершена)')

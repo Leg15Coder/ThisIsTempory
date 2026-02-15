@@ -10,14 +10,19 @@ from app.core.fastapi_config import templates
 from app.tasks.utils import rarity_class
 from app.tasks.database import QuestStatus, QuestRarity, Quest, get_db
 from app.tasks.service import QuestService, SubtaskService
+from app.auth.dependencies import require_user
+from app.auth.models import User
 
 BASE_URL = '/quest-app'
 router = APIRouter(prefix=BASE_URL)
 
 
-def get_quest_service(db: Session = Depends(get_db)) -> QuestService:
-    """Внедрение зависимости для сервиса квестов"""
-    return QuestService(db)
+def get_quest_service(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
+) -> QuestService:
+    """Внедрение зависимости для сервиса квестов с user_id"""
+    return QuestService(db, user_id=current_user.id)
 
 
 def get_subtask_service(db: Session = Depends(get_db)) -> SubtaskService:
@@ -26,7 +31,11 @@ def get_subtask_service(db: Session = Depends(get_db)) -> SubtaskService:
 
 
 @router.get("/", response_class=HTMLResponse)
-async def read_quests(request: Request, service: QuestService = Depends(get_quest_service)):
+async def read_quests(
+    request: Request,
+    service: QuestService = Depends(get_quest_service),
+    current_user: User = Depends(require_user)
+):
     """Главная страница с активными квестами"""
     quests = service.get_active_quests()
     return templates.TemplateResponse("index.html", {
@@ -36,16 +45,21 @@ async def read_quests(request: Request, service: QuestService = Depends(get_ques
         "get_class": rarity_class,
         "main_text": "Активные квесты",
         "base_url": BASE_URL,
+        "current_user": current_user,
     })
 
 
 @router.get("/help", response_class=HTMLResponse)
-async def show_help(request: Request):
+async def show_help(
+    request: Request,
+    current_user: User = Depends(require_user)
+):
     """Страница справки"""
     return templates.TemplateResponse("help.html", {
         "request": request,
         "now": datetime.now,
         "base_url": BASE_URL,
+        "current_user": current_user,
     })
 
 
@@ -53,7 +67,8 @@ async def show_help(request: Request):
 async def show_quest_detail(
     request: Request,
     quest_id: int,
-    service: QuestService = Depends(get_quest_service)
+    service: QuestService = Depends(get_quest_service),
+    current_user: User = Depends(require_user)
 ):
     """Детальная страница квеста"""
     quest = service.mark_quest_read(quest_id)
@@ -64,12 +79,17 @@ async def show_quest_detail(
         "request": request,
         "quest": quest,
         "base_url": BASE_URL,
-        "get_class": rarity_class
+        "get_class": rarity_class,
+        "current_user": current_user,
     })
 
 
 @router.get("/create", response_class=HTMLResponse)
-async def create_quest_form(request: Request, service: QuestService = Depends(get_quest_service)):
+async def create_quest_form(
+    request: Request,
+    service: QuestService = Depends(get_quest_service),
+    current_user: User = Depends(require_user)
+):
     """Форма создания нового квеста"""
     available_quests = service.get_all_quests()
 
@@ -77,7 +97,8 @@ async def create_quest_form(request: Request, service: QuestService = Depends(ge
         "request": request,
         "now": datetime.now,
         "base_url": BASE_URL,
-        "available_quests": available_quests
+        "available_quests": available_quests,
+        "current_user": current_user,
     })
 
 
@@ -85,6 +106,7 @@ async def create_quest_form(request: Request, service: QuestService = Depends(ge
 async def create_quest(
     request: Request,
     service: QuestService = Depends(get_quest_service),
+    current_user: User = Depends(require_user),
     title: str = Form(...),
     author: str = Form("???"),
     description: str = Form(""),
@@ -99,24 +121,25 @@ async def create_quest(
         if not deadline_time:
             deadline_time = "00:00"
         if not deadline_date:
-            deadline_date = (datetime.now().date() + timedelta(days=1)).isoformat()
+            deadline_date = str(datetime.now().date())
 
-        deadline = f"{deadline_date}T{deadline_time}"
+        deadline_str = f"{deadline_date} {deadline_time}"
+
         try:
-            parsed_deadline = datetime.strptime(deadline, "%Y-%m-%dT%H:%M")
+            parsed_deadline = datetime.strptime(deadline_str, "%Y-%m-%d %H:%M")
         except ValueError:
             pass
 
     form_data = await request.form()
-    parent_quests_ids = [int(pid) for pid in form_data.getlist("parent_quests") if pid]
+    parent_quests = form_data.getlist("parent_quests")
+    subtasks_json = form_data.get("subtasks")
 
-    subtasks_data = []
-    for subtask_str in form_data.getlist("subtasks"):
+    subtasks_data = None
+    if subtasks_json:
         try:
-            subtask = json.loads(subtask_str)
-            subtasks_data.append(subtask)
+            subtasks_data = json.loads(subtasks_json)
         except json.JSONDecodeError:
-            continue
+            pass
 
     service.create_quest(
         title=title,
@@ -125,15 +148,19 @@ async def create_quest(
         deadline=parsed_deadline,
         rarity=rarity,
         cost=cost,
-        parent_ids=parent_quests_ids if parent_quests_ids else None,
-        subtasks_data=subtasks_data if subtasks_data else None
+        parent_ids=[int(pid) for pid in parent_quests] if parent_quests else None,
+        subtasks_data=subtasks_data
     )
 
     return RedirectResponse(url=BASE_URL, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/today", response_class=HTMLResponse)
-async def show_today(request: Request, service: QuestService = Depends(get_quest_service)):
+async def show_today(
+    request: Request,
+    service: QuestService = Depends(get_quest_service),
+    current_user: User = Depends(require_user)
+):
     """Страница с квестами на сегодня"""
     todays_candidates = service.get_todays_candidates()
     todays_quests = service.get_today_quests()
@@ -143,7 +170,8 @@ async def show_today(request: Request, service: QuestService = Depends(get_quest
         "quests": todays_quests,
         "quests_for_approve": todays_candidates,
         "base_url": BASE_URL,
-        "get_class": rarity_class
+        "get_class": rarity_class,
+        "current_user": current_user,
     })
 
 
@@ -166,7 +194,11 @@ async def mark_today(
 
 
 @router.get("/archive", response_class=HTMLResponse)
-async def show_archive(request: Request, service: QuestService = Depends(get_quest_service)):
+async def show_archive(
+    request: Request,
+    service: QuestService = Depends(get_quest_service),
+    current_user: User = Depends(require_user)
+):
     """Страница с завершенными квестами"""
     quests = service.get_archived_quests()
 
@@ -177,6 +209,7 @@ async def show_archive(request: Request, service: QuestService = Depends(get_que
         "post_url": f"{BASE_URL}/archive/filter-quests",
         "main_text": "Завершённые квесты",
         "base_url": BASE_URL,
+        "current_user": current_user,
     })
 
 

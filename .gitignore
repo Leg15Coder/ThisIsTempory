@@ -63,11 +63,14 @@ alembic/versions/__pycache__/
 # Temporary files
 *.tmp
 *.bak
-*.~
-*~
 
 # OS
 Thumbs.db
-.DS_Store
 
 /COPILOT/
+
+# Firebase & Auth
+firebase-credentials.json
+firebase-adminsdk-*.json
+.firebase/
+**/firebase-credentials*.json

@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -24,10 +25,12 @@ class Settings(BaseSettings):
     # Generator settings
     generator_check_interval: int = 300  # секунды
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_file='.env',
+        env_file_encoding='utf-8',
+        case_sensitive=False,
+        extra='ignore',
+    )
 
     def get_database_url(self) -> str:
         """Получить URL базы данных с корректировкой для PostgreSQL"""

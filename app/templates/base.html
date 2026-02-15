@@ -7,11 +7,12 @@
     <meta name="theme-color" content="#6e45e2">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
 
     <title>The Last Reality - Quest Manager</title>
 
     <!-- Preload critical resources -->
-    <link rel="preconnect" href="{{ url_for('static', path='/') }}">
+    <link rel="preconnect" href="{{ url_for('static', path='css/base.css') }}">
 
     <!-- Styles -->
     <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
@@ -21,14 +22,19 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/create.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/sorts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/today.css') }}">
+    <style>
+        .auth-container { margin-top: 50px; }
+    </style>
     <!-- Media queries should be last -->
     <link rel="stylesheet" href="{{ url_for('static', path='css/media.css') }}">
 
     <!-- Favicon -->
-    <link rel="icon" href="{{ url_for('static', path='/favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', path='favicon.ico') }}" type="image/x-icon">
 
     <!-- Base script -->
-    <script src="{{ url_for('static', path='/js/base.js') }}" defer></script>
+    <script src="{{ url_for('static', path='js/base.js') }}" defer></script>
+    <!-- Analytics loader (external) -->
+    <script src="{{ url_for('static', path='js/analytics.js') }}" defer></script>
 </head>
 <body>
     <!-- Animated background -->
@@ -44,14 +50,32 @@
     <!-- Header -->
     <header class="header" role="banner">
         <button class="menu-btn" id="menuBtn" aria-label="Открыть меню" aria-expanded="false">
-            <div class="menu-burger"></div>
+            <span class="menu-burger" aria-hidden="true"></span>
         </button>
     </header>
 
     <!-- Sidebar navigation -->
-    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Главное меню">
+    <aside class="sidebar" id="sidebar" aria-label="Главное меню">
         <nav>
             <ul class="menu">
+                {% if current_user %}
+                <li class="menu-item">
+                    <a href="/profile" class="menu-link">
+                        <span aria-hidden="true">👤</span> Профиль
+                    </a>
+                </li>
+                {% else %}
+                <li class="menu-item">
+                    <a href="/auth/login" class="menu-link">
+                        <span aria-hidden="true">🔐</span> Вход
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="/auth/register" class="menu-link">
+                        <span aria-hidden="true">✨</span> Регистрация
+                    </a>
+                </li>
+                {% endif %}
                 <li class="menu-item">
                     <a href="{{ base_url }}/create" class="menu-link">
                         <span aria-hidden="true">✏️</span> Создать
@@ -74,7 +98,6 @@
                 </li>
             </ul>
         </nav>
-    </nav>
     </aside>
 
     <!-- Main content -->

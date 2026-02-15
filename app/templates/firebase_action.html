@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-container">
+  <div class="auth-card">
+    <div id="actionContent">
+      <h2 id="actionTitle">Обработка действия...</h2>
+      <div id="actionBody"></div>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', path='css/create.css') }}">
+<script type="module" src="{{ url_for('static', path='js/firebase-action.js') }}"></script>
+{% endblock %}

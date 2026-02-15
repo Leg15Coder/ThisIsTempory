@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Миссия на Марс</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/physics.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Моделирование полета на Марс</h1>
+
+        <div class="mission-control">
+            <div class="input-panel">
+                <h2>Параметры миссии</h2>
+
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="initial_mass">Начальная масса (кг):</label>
+                        <input type="number" id="initial_mass" value="1000000" step="1000">
+                    </div>
+                    <div class="input-group">
+                        <label for="landing_mass">Масса полезного груза (кг):</label>
+                        <input type="number" id="landing_mass" value="1" step="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="gases_velocity">Скорость вылета газов (м/с):</label>
+                        <input type="number" id="gases_velocity" value="20000" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="velocity">Скорость взлёта относительно Земли (м/с):</label>
+                        <input type="number" id="velocity" value="6350" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="landing_velocity">Скорость посадки относительно Марса (м/с):</label>
+                        <input type="number" id="landing_velocity" value="1350" step="1">
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <h3>Дополнительные параметры</h3>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="include_atmosphere">
+                        <label for="include_atmosphere">Учет атмосферы планет</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="bounded_overload">
+                        <label for="bounded_overload">Ограничить перегрузку для пилота</label>
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <h3>Продвинутые параметры</h3>
+                    <div class="input-group">
+                        <label for="safety_margin">Относительная безопасная высота торможения при посадке (%):</label>
+                        <input type="number" id="safety_margin" value="60" step="0.5" min="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="max_landing_velocity">Максимальная скорость безопасной посадки (м/c):</label>
+                        <input type="number" id="max_landing_velocity" value="0.8" step="0.001" min="0.001">
+                    </div>
+                    <div class="input-group">
+                        <label for="max_dm_dt">Максимальный выход топлива от массы корабля (%):</label>
+                        <input type="number" id="max_dm_dt" value="10" step="0.1" min="1" max="100">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button onclick="startMission()">Запустить миссию</button>
+                    <button onclick="pauseMission()" class="btn-pause">Пауза</button>
+                    <button onclick="resetMission()" class="btn-reset">Сброс</button>
+                </div>
+            </div>
+
+            <div class="results-panel">
+                <h2>Результаты миссии</h2>
+                <div id="mission-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Общее время:</span>
+                        <span class="stat-value" id="total-time">-</span>
+                    </div>
+                    <div class="stat-item" style="display: grid;">
+                        <span class="stat-label">Израсходовано топлива:</span>
+                        <span>Всего: <span class="stat-value" id="fuel-consumed">-</span></span>
+                        <span>Для выхода на орбиту: <span class="stat-value" id="fuel-consumed-earth">-</span></span>
+                        <span>На посадку: <span class="stat-value" id="fuel-consumed-mars">-</span></span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Максимальная перегрузка:</span>
+                        <span class="stat-value" id="max-acceleration">-</span>
+                    </div>
+                </div>
+
+                <div class="phase-indicators">
+                    <div class="phase-indicator" id="phase-launch">
+                        <span>🚀 Запуск</span>
+                    </div>
+                    <div class="phase-indicator" id="phase-transfer">
+                        <span>🌌 Перелет</span>
+                    </div>
+                    <div class="phase-indicator" id="phase-landing">
+                        <span>🔴 Посадка</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="visualization">
+            <h2>Визуализация миссии</h2>
+
+            <div class="animation-controls">
+                <label for="animation-speed">Скорость анимации:</label>
+                <input type="range" id="animation-speed" min="1" max="100" value="10">
+                <span id="speed-value">10x</span>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="missionCanvas" width="1000" height="600"></canvas>
+            </div>
+
+            <div class="real-time-data">
+                <h3>Текущие параметры</h3>
+                <div class="real-time-stats">
+                    <span>Высота: <span id="current-altitude">-</span> км</span>
+                    <span>Скорость: <span id="current-velocity">-</span> км/с</span>
+                    <span>Ускорение: <span id="current-overload">-</span> м/c<sup>2</sup></span>
+                    <span>Масса: <span id="current-mass">-</span> кг</span>
+                    <span>Время: <span id="current-time">-</span> дней</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts">
+            <div class="chart-container">
+                <h2>Скорость и масса</h2>
+                <canvas id="velocityMassChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', path='/js/physics/M3.js') }}" defer></script>
+</body>
+</html>

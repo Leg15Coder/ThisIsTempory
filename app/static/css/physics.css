@@ -1,0 +1,557 @@
+body {
+    font-family: Arial, sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+    margin: 0;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 95%;
+    margin: 0 auto;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+    text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+}
+
+h2 {
+    color: #444;
+    margin-bottom: 15px;
+}
+
+h3 {
+    color: #45b7d1;
+    margin-bottom: 15px;
+}
+
+.input-panel {
+    background: #f8f9fa;
+    padding: 20px;
+    margin: 10px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.input-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.input-section:last-child {
+    border-bottom: none;
+}
+
+.input-group {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.input-group label {
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: #2d3748;
+    min-width: 250px;
+    font-weight: 600;
+}
+
+.input-group input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    width: 150px;
+}
+
+.inline {
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.checkbox-group input {
+    margin-right: 10px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    min-width: 250px;
+}
+
+input[type="number"] {
+    width: 100px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.button-group button {
+      padding: 8px 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+    }
+
+button {
+    background: #007bff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    background: #0056b3;
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+.btn-pause {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.btn-reset {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.results-panel {
+    background: #e7f3ff;
+    padding: 20px;
+    margin: 10px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+#stats p {
+    margin: 8px 0;
+    font-size: 16px;
+}
+
+#stats span {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.animation-container {
+    background: #fff3cd;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.animation-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+#animation-speed {
+    accent-color: #ff7b00;
+    width: 200px;
+}
+
+#animationCanvas {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    display: block;
+    margin: 0 auto;
+}
+
+.chart-container {
+    background: #d4edda;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    position: relative;
+    height: 400px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#speed-value {
+    font-weight: bold;
+    color: #ff7b00;
+    min-width: 30px;
+}
+
+#stats p {
+    margin: 5px 0;
+    font-size: 16px;
+}
+
+#stats span {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.mission-control {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.stat-label {
+    font-weight: 600;
+}
+
+.stat-value {
+    color: #ff6b6b;
+    font-weight: bold;
+}
+
+.phase-indicators {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.phase-indicator {
+    flex: 1;
+    padding: 15px;
+    text-align: center;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+.phase-indicator.active {
+    opacity: 1;
+    background: rgba(76, 175, 80, 0.3);
+    border-color: #4caf50;
+}
+
+.visualization {
+    margin-bottom: 30px;
+    min-width: 50%;
+}
+
+.animation-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.canvas-container {
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    justify-content: center;
+}
+
+#missionCanvas {
+    width: 100%;
+    height: 600px;
+    display: block;
+}
+
+.real-time-data {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+}
+
+.real-time-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.real-time-stats span {
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .input-group {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .button-group {
+        flex-direction: column;
+    }
+
+    #animationCanvas {
+        width: 100%;
+        height: 300px;
+    }
+}
+
+#infoPanel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.info-label {
+  color: #4a5568;
+  font-weight: 500;
+}
+.info-value {
+  color: #2d3748;
+  font-family: 'Courier New', monospace;
+}
+#chart {
+  width: 100%;
+  height: 260px;
+}
+.btn-reset {
+  cursor: pointer;
+  background: #e53e3e;
+  color: white;
+}
+.btn-primary {
+  background: #3182ce;
+  color: white;
+}
+.btn-secondary {
+  background: #718096;
+  color: white;
+}
+.axis-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+.axis-canvas-container {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.notification.error {
+  background: #e53e3e;
+}
+.notification.success {
+  background: #38a169;
+}
+
+/* Общие вспомогательные классы */
+
+.value-display {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #4a5568;
+  min-width: 60px;
+}
+
+/* Панель управления (mission control) */
+
+.mission-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+/* Блоки ввода (input-panel / input-section / input-group уже частично описаны) */
+
+.input-panel {
+  background: #f8f9fa;
+  padding: 20px;
+  margin: 10px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.input-section {
+  flex: 1 1 220px;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+.input-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-group.inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Индикатор статуса */
+
+.status-line {
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.status-line.idle {
+  background: #edf2f7;
+  color: #4a5568;
+}
+
+.status-line.running {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.status-line.paused {
+  background: #fefcbf;
+  color: #744210;
+}
+
+/* Направление поля */
+
+.axis-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.axis-canvas-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.field-direction-text {
+  font-size: 13px;
+  color: #4a5568;
+}
+
+.field-direction-arrow {
+  font-size: 20px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf2f7;
+  color: #2b6cb0;
+  min-width: 32px;
+  text-align: center;
+}
+
+.step-counter {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #4a5568;
+}
+
+#canvas {
+  display: block;
+  max-width: 100%;
+}
+
+.legend {
+  margin-top: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #2d3748;
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.stats-panel {
+  margin-top: 20px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}

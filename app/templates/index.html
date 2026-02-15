@@ -6,7 +6,7 @@
 
 <div class="modal" id="modal">
     <div class="modal-content">
-        <h2 class="modal-title" id="modalTitle"></h2>
+        <h2 class="modal-title" id="modalTitle"><span class="sr-only">Подробности квеста</span></h2>
         <div class="modal-author" id="modalAuthor"></div>
         <div class="modal-deadline" id="modalDeadline"></div>
         <p class="modal-text" id="modalText"></p>
@@ -17,13 +17,15 @@
 <!-- Основные элементы управления (в углу страницы) -->
 <form action="{{post_url}}" method="post" id="fastSortForm">
     <div class="quick-controls">
-        <select id="quickSort" class="pixel-select small" name="sort_type">
+        <label for="quickSort" class="sr-only">Сортировка</label>
+        <select id="quickSort" class="pixel-select small select-modern" name="sort_type">
             <option value="created-desc">Сначала новые</option>
             <option value="deadline-asc">Ближайшие дедлайны</option>
             <option value="title-asc">А-Я</option>
             <option value="rarity-desc">Сначала сложные</option>
         </select>
-        <input type="text" id="quickSearch" placeholder="Найти..." class="pixel-input small" name="find">
+        <label for="quickSearch" class="sr-only">Поиск</label>
+        <input type="text" id="quickSearch" placeholder="Найти..." class="pixel-input small input-modern" name="find">
         <button id="openAdvancedFilters" class="pixel-button small" type="button">⚙️</button>
     </div>
 </form>
@@ -37,7 +39,7 @@
             <h3>Сортировка</h3>
             <div class="filter-row">
                 <label for="advSortBy">Критерий:</label>
-                <select id="advSortBy" class="pixel-select">
+                <select id="advSortBy" class="pixel-select select-modern">
                     <option value="created">Дата создания</option>
                     <option value="deadline">Дедлайн</option>
                     <option value="title">Название</option>
@@ -45,7 +47,7 @@
                 </select>
 
                 <label for="advSortOrder">Порядок:</label>
-                <select id="advSortOrder" class="pixel-select">
+                <select id="advSortOrder" class="pixel-select select-modern">
                     <option value="asc">По возрастанию</option>
                     <option value="desc">По убыванию</option>
                 </select>
@@ -57,7 +59,7 @@
 
             <div class="filter-row">
                 <label for="advRarity">Редкость:</label>
-                <select id="advRarity" class="pixel-select">
+                <select id="advRarity" class="pixel-select select-modern">
                     <option value="all">Все</option>
                     <option value="common">Обычный</option>
                     <option value="uncommon">Необычный</option>
@@ -69,7 +71,7 @@
 
             <div class="filter-row">
                 <label for="advDeadline">Дедлайн:</label>
-                <select id="advDeadline" class="pixel-select">
+                <select id="advDeadline" class="pixel-select select-modern">
                     <option value="all">Все</option>
                     <option value="today">Сегодня</option>
                     <option value="tomorrow">Завтра</option>
@@ -81,24 +83,25 @@
 
             <div class="filter-row">
                 <label for="advAuthor">Автор:</label>
-                <input type="text" id="advAuthor" placeholder="Фильтр по автору" class="pixel-input">
+                <input type="text" id="advAuthor" placeholder="Фильтр по автору" class="pixel-input input-modern">
             </div>
         </div>
 
         <div class="filters-section">
             <h3>Текстовый поиск</h3>
-            <input type="text" id="advSearchQuery" placeholder="Введите поисковый запрос..." class="pixel-input">
+            <label for="advSearchQuery" class="sr-only">Текстовый поиск</label>
+            <input type="text" id="advSearchQuery" placeholder="Введите поисковый запрос..." class="pixel-input input-modern">
 
             <div class="search-options">
-                <label>
+                <label class="custom-checkbox">
                     <input type="checkbox" id="searchInTitle" checked>
                     В названиях
                 </label>
-                <label>
+                <label class="custom-checkbox">
                     <input type="checkbox" id="searchInDescription" checked>
                     В описаниях
                 </label>
-                <label>
+                <label class="custom-checkbox">
                     <input type="checkbox" id="searchInAuthor">
                     В авторах
                 </label>

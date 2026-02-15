@@ -3,8 +3,9 @@ from datetime import datetime, timedelta as dl
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy import create_engine, Boolean, Float, ForeignKey
-from sqlalchemy import Column, Integer, String, DateTime, Enum, Text, Table
-import enum, os
+from sqlalchemy import Column, Integer, String, DateTime, Text, Table
+import enum
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,7 +20,9 @@ if not DATABASE_URL:
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    pool_pre_ping=True,  # Проверка соединения перед использованием
+    echo=False  # Отключаем логирование SQL запросов в production
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -164,30 +167,17 @@ class Quest(Base):
     @property
     def is_active(self):
         """Проверяет, должен ли квест быть активным"""
-        # Если нет родителей - квест активен по умолчанию
         if not self.parents:
             return True
 
-        # Проверяем, все ли родительские квесты завершены успешно
         return all(parent.status == QuestStatus.finished for parent in self.parents)
 
-    async def update_status(self):
-        """Обновляет статус квеста на основе прогресса и родительских квестов"""
-        db = Session.object_session(self)
-
-        if self.is_active and self.status == QuestStatus.inactive:
-            self.status = QuestStatus.active
-
-        # Проверяем условия завершения
-        if (self.status == QuestStatus.active and self.progress == 100
-                or self.status in (QuestStatus.finished, QuestStatus.failed)):
-            # self.status = QuestStatus.finished
-            # Активируем дочерние квесты
+    def update_children_status(self):
+        """Обновляет статусы дочерних квестов при изменении статуса родителя"""
+        if self.status == QuestStatus.finished:
             for child in self.children:
-                await child.update_status()
-
-        if db:
-            db.commit()
+                if child.status == QuestStatus.inactive and child.is_active:
+                    child.status = QuestStatus.active
 
     def __str__(self):
         return f"<Quest {self.id}: {self.title} by {self.author}>"
@@ -205,30 +195,32 @@ class QuestGenerator(Base):
     last_generate = Column(DateTime, nullable=False, default=datetime.now())
 
     def generate_quest(self):
-        if self.quest.deadline:
-            db = Session.object_session(self)
+        """Генерирует новый квест на основе шаблона"""
+        db = Session.object_session(self)
+        if not db:
+            return
 
-            created = datetime.now()
-            if self.quest.created:
-                delta = self.quest.deadline - self.quest.created
-            else:
-                delta = dl(days=1)
+        created = datetime.now()
 
-            new_quest = Quest(
-                title=self.quest.title,
-                author=self.quest.author,
-                description=self.quest.description,
-                cost=self.quest.cost,
-                created=created,
-                deadline=created + delta,
-                rarity=self.quest.rarity,
-                status=QuestStatus.active,
-                is_new=True
-            )
+        if self.quest.deadline and self.quest.created:
+            delta = self.quest.deadline - self.quest.created
+        else:
+            delta = dl(days=1)
 
-            if db:
-                db.add(new_quest)
-                db.commit()
+        new_quest = Quest(
+            title=self.quest.title,
+            author=self.quest.author,
+            description=self.quest.description,
+            cost=self.quest.cost,
+            created=created,
+            deadline=created + delta,
+            rarity=self.quest.rarity,
+            status=QuestStatus.active,
+            is_new=True
+        )
+
+        db.add(new_quest)
+        db.commit()
 
 
 Base.metadata.create_all(bind=engine)

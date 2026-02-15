@@ -1,77 +1,713 @@
-/* Form Styles */
-.form-group {
-    margin-bottom: 1rem;
+.create-container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 1.5rem;
 }
 
-.form-group label {
-    display: block;
+.create-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.create-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--epic));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin-bottom: 0.5rem;
-    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+.create-subtitle {
+    color: var(--text-secondary);
     font-size: 0.9rem;
 }
 
-.pixel-input, .pixel-textarea, .pixel-select {
+.quest-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-section {
+    background: rgba(30, 40, 50, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.form-section:hover {
+    border-color: rgba(110, 69, 226, 0.3);
+}
+
+.hero-section {
+    position: relative;
+}
+
+.glow-border {
+    position: relative;
+}
+
+.glow-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, var(--accent), var(--epic));
+    border-radius: 12px;
+    opacity: 0.2;
+    filter: blur(8px);
+    z-index: -1;
+    transition: opacity 0.3s ease;
+}
+
+.hero-section:hover .glow-border::before {
+    opacity: 0.4;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-section.half {
+    padding: 1.5rem;
+}
+
+.form-group-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group-modern.half {
+    flex: 1;
+}
+
+.label-small {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.label-small .icon {
+    font-size: 0.9rem;
+}
+
+.input-modern,
+.input-hero,
+.textarea-modern,
+.select-modern {
     width: 100%;
-    padding: 0.5rem;
-    background-color: var(--bg-darker);
-    border: var(--pixel-size) solid var(--accent);
+    background: rgba(15, 15, 21, 0.6);
+    border: 2px solid rgba(110, 69, 226, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
     color: var(--text-primary);
-    font-size: 0.9rem;
-    transition: all 0.3s;
+    font-size: 0.95rem;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s ease;
 }
 
-.pixel-input:focus, .pixel-textarea:focus, .pixel-select:focus {
+.input-hero {
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+.input-modern:focus,
+.input-hero:focus,
+.textarea-modern:focus,
+.select-modern:focus {
     outline: none;
-    border-color: var(--accent-hover);
-    box-shadow: 0 0 5px var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(110, 69, 226, 0.1),
+                0 0 15px rgba(110, 69, 226, 0.3);
 }
 
-.pixel-textarea {
+.input-modern::placeholder,
+.input-hero::placeholder,
+.textarea-modern::placeholder {
+    color: rgba(160, 160, 160, 0.5);
+}
+
+.textarea-modern {
     resize: vertical;
     min-height: 100px;
+    line-height: 1.5;
+}
+
+.input-with-suffix {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-suffix .input-modern {
+    padding-right: 4rem;
+}
+
+.input-suffix {
+    position: absolute;
+    right: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+.select-modern {
+    appearance: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.select-modern option {
+    background: var(--bg-darker);
+    color: var(--text-primary);
+}
+
+.select-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    pointer-events: none;
+    transition: transform 0.3s ease;
+}
+
+.select-wrapper:hover .select-icon {
+    transform: translateY(-50%) scale(1.2);
+}
+
+.multiselect-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.search-input {
+    border-radius: 8px 8px 0 0;
+}
+
+.select-modern.multiselect {
+    border-radius: 0 0 8px 8px;
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+}
+
+.select-modern.multiselect::-webkit-scrollbar {
+    width: 6px;
+}
+
+.select-modern.multiselect::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.select-modern.multiselect::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 3px;
+}
+
+.select-modern.multiselect option {
+    padding: 0.5rem;
+    cursor: pointer;
+}
+
+.select-modern.multiselect option:checked {
+    background: linear-gradient(90deg, var(--accent), var(--epic)) !important;
+    color: white !important;
+}
+
+.selected-parents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    min-height: 2rem;
+}
+
+.parent-tag {
+    background: rgba(110, 69, 226, 0.2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.parent-tag:hover {
+    background: rgba(110, 69, 226, 0.3);
+    transform: translateY(-1px);
+}
+
+.parent-tag-remove {
+    cursor: pointer;
+    font-weight: bold;
+    opacity: 0.7;
+}
+
+.parent-tag-remove:hover {
+    opacity: 1;
+}
+
+/* Datetime группа */
+.datetime-group {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 0.5rem;
+}
+
+.date-input,
+.time-input {
+    font-size: 0.85rem;
 }
 
 .char-counter {
     text-align: right;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    margin-top: 0.2rem;
+    margin-top: -0.25rem;
 }
 
-.datetime-inputs {
+.hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+}
+
+.hint .icon {
+    font-size: 0.9rem;
+}
+
+.form-accordion {
+    background: rgba(30, 40, 50, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.form-accordion:hover {
+    border-color: rgba(110, 69, 226, 0.3);
+}
+
+.accordion-header {
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    user-select: none;
+    transition: all 0.3s ease;
+}
+
+.accordion-header:hover {
+    background: rgba(110, 69, 226, 0.05);
+}
+
+.accordion-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.accordion-arrow {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease;
+}
+
+.form-accordion[open] .accordion-arrow {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.objectives-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.objectives-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.objectives-buttons {
     display: flex;
     gap: 0.5rem;
 }
 
-.datetime-inputs input {
-    flex: 1;
-}
-
-.pixel-button {
-    background-color: var(--accent);
-    color: var(--text-primary);
-    border: var(--pixel-size) solid var(--accent);
-    padding: 0.75rem 1.5rem;
+.btn-add-objective {
+    background: rgba(110, 69, 226, 0.15);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
     cursor: pointer;
-    font-size: 1rem;
-    width: 100%;
-    transition: all 0.3s;
-    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s ease;
+    font-family: 'Courier New', monospace;
 }
 
-.pixel-button:hover {
-    background-color: var(--accent-hover);
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-    box-shadow: 0 0 10px var(--accent);
+.btn-add-objective:hover {
+    background: rgba(110, 69, 226, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(110, 69, 226, 0.3);
 }
 
-.pixel-button.secondary {
-    background-color: var(--bg-darker);
-    border-color: var(--text-secondary);
+.btn-add-objective:active {
+    transform: translateY(0);
+}
+
+.subtasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 50px;
+}
+
+.empty-objectives {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-secondary);
+}
+
+.empty-objectives .icon {
+    font-size: 2.5rem;
+    opacity: 0.3;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.empty-objectives p {
+    margin: 0.25rem 0;
+}
+
+.empty-objectives .hint {
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+/* Подзадача */
+.subtask-item {
+    background: rgba(15, 15, 21, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.subtask-item:hover {
+    border-color: rgba(110, 69, 226, 0.3);
+    background: rgba(15, 15, 21, 0.6);
+}
+
+.subtask-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.subtask-type-icon {
+    width: 2rem;
+    height: 2rem;
+    background: rgba(110, 69, 226, 0.2);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.subtask-input {
+    flex: 1;
+    background: transparent;
+    border: none;
     color: var(--text-primary);
+    font-size: 0.95rem;
+    font-family: 'Courier New', monospace;
+    padding: 0;
 }
 
-.pixel-button.secondary:hover {
-    background-color: var(--bg-dark);
+.subtask-input:focus {
+    outline: none;
+}
+
+.subtask-delete {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.3rem;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.subtask-delete:hover {
+    background: rgba(255, 0, 0, 0.2);
+    color: #ff4444;
+}
+
+/* Numeric inputs для подзадачи */
+.subtask-numeric-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.subtask-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.subtask-field label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.subtask-field-input {
+    background: rgba(110, 69, 226, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: 'Courier New', monospace;
+    transition: all 0.2s ease;
+}
+
+.subtask-field-input:focus {
+    outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(110, 69, 226, 0.1);
+}
+
+/* Weight slider */
+.subtask-weight {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.subtask-weight label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.weight-slider-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.weight-slider {
+    flex: 1;
+    height: 4px;
+    background: rgba(110, 69, 226, 0.2);
+    border-radius: 2px;
+    appearance: none;
+    cursor: pointer;
+}
+
+.weight-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.weight-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 8px var(--accent);
+}
+
+.weight-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.weight-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 2rem;
+    text-align: center;
+}
+
+/* Footer с кнопкой */
+.form-footer {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 10;
+}
+
+.btn-create-quest {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--epic));
+    border: none;
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(110, 69, 226, 0.4);
+}
+
+.btn-create-quest:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(110, 69, 226, 0.6);
+}
+
+.btn-create-quest:active {
+    transform: translateY(0);
+}
+
+.btn-create-quest .icon {
+    font-size: 1.3rem;
+}
+
+/* ============================================
+   АДАПТИВНОСТЬ
+   ============================================ */
+
+@media (max-width: 768px) {
+    .create-container {
+        padding: 1rem;
+    }
+
+    .create-title {
+        font-size: 1.5rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .datetime-group {
+        grid-template-columns: 1fr;
+    }
+
+    .objectives-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .objectives-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .btn-add-objective {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .subtask-numeric-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .create-container {
+        padding: 0.75rem;
+    }
+
+    .form-section {
+        padding: 1rem;
+    }
+
+    .accordion-header {
+        padding: 1rem;
+    }
+
+    .accordion-content {
+        padding: 0 1rem 1rem 1rem;
+    }
+
+    .btn-add-objective .btn-text {
+        display: none;
+    }
+
+    .btn-create-quest {
+        font-size: 1rem;
+        padding: 0.875rem 1.5rem;
+    }
 }

@@ -2,21 +2,37 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>The Last Reality</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="The Last Reality - Превратите свои задачи в эпические квесты с системой редкости и зависимостей">
+    <meta name="theme-color" content="#6e45e2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <title>The Last Reality - Quest Manager</title>
+
+    <!-- Preload critical resources -->
+    <link rel="preconnect" href="{{ url_for('static', path='/') }}">
+
+    <!-- Styles -->
     <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/cards.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/modal.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/rarity.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/create.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/media.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/sorts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/today.css') }}">
+    <!-- Media queries should be last -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/media.css') }}">
+
+    <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', path='/favicon.ico') }}" type="image/x-icon">
+
+    <!-- Base script -->
     <script src="{{ url_for('static', path='/js/base.js') }}" defer></script>
 </head>
 <body>
-    <div class="gradient-bg">
+    <!-- Animated background -->
+    <div class="gradient-bg" aria-hidden="true">
         <div class="circle"></div>
         <div class="circle"></div>
         <div class="circle"></div>
@@ -25,32 +41,53 @@
         <div class="circle"></div>
     </div>
 
-    <header class="header">
-        <a class="menu-btn" id="menuBtn">
+    <!-- Header -->
+    <header class="header" role="banner">
+        <button class="menu-btn" id="menuBtn" aria-label="Открыть меню" aria-expanded="false">
             <div class="menu-burger"></div>
-        </a>
+        </button>
     </header>
 
-    <aside class="sidebar" id="sidebar">
-        <ul class="menu">
-            <li class="menu-item"><a href="{{ base_url }}/create" class="menu-link">Создать</a></li>
-            <li class="menu-item"><a href="{{ base_url }}" class="menu-link">Квесты</a></li>
-            <li class="menu-item"><a href="{{ base_url }}/today" class="menu-link">На сегодня</a></li>
-            <!-- <li class="menu-item"><a href="{{ base_url }}/matrix" class="menu-link">Распределение</a></li> -->
-            <li class="menu-item"><a href="{{ base_url }}/archive" class="menu-link">История</a></li>
-        </ul>
+    <!-- Sidebar navigation -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Главное меню">
+        <nav>
+            <ul class="menu">
+                <li class="menu-item">
+                    <a href="{{ base_url }}/create" class="menu-link">
+                        <span aria-hidden="true">✏️</span> Создать
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ base_url }}" class="menu-link">
+                        <span aria-hidden="true">⚔️</span> Квесты
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ base_url }}/today" class="menu-link">
+                        <span aria-hidden="true">📅</span> На сегодня
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ base_url }}/archive" class="menu-link">
+                        <span aria-hidden="true">📚</span> История
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </nav>
     </aside>
 
-    <!-- Контент -->
-    <main class="main" id="main">
+    <!-- Main content -->
+    <main class="main" id="main" role="main">
         {% block content %}
         {% endblock %}
     </main>
 
-    <footer class="footer">
-        <div>© 2025</div>
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div>© 2025 The Last Reality</div>
         <div class="footer-links">
-            <a href="https://t.me/dimka_ryaz" class="footer-link">Контакты</a>
+            <a href="https://t.me/dimka_ryaz" class="footer-link" target="_blank" rel="noopener">Контакты</a>
             <a href="{{ base_url }}/help" class="footer-link">Помощь</a>
         </div>
     </footer>

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
@@ -59,15 +60,27 @@ app.add_middleware(
     max_age=SESSION_MAX_AGE_IN_SECONDS
 )
 
-static_dir = settings.static_path if hasattr(settings, 'static_path') else settings.static_dir
-from pathlib import Path
-if not Path(static_dir).exists():
-    fallback = str(Path(__file__).resolve().parent / "static")
-    print(f"⚠️ Указанная директория static не найдена: {static_dir}. Попытка использовать fallback: {fallback}")
-    if Path(fallback).exists():
-        static_dir = fallback
+
+project_root = Path(__file__).resolve().parent.parent
+public_static = project_root / 'public' / 'static'
+if public_static.exists():
+    static_dir = str(public_static.resolve())
+    print(f"ℹ️ Using public static directory: {static_dir}")
+else:
+    static_dir = settings.static_path if hasattr(settings, 'static_path') else settings.static_dir
+    static_dir_path = Path(static_dir)
+    if not static_dir_path.is_absolute():
+        static_dir_path = (project_root / static_dir).resolve()
+    if static_dir_path.exists():
+        static_dir = str(static_dir_path)
+        print(f"ℹ️ Using settings static directory: {static_dir}")
     else:
-        print(f"❌ Ни основной, ни fallback static путь не найдены. static_dir={static_dir}, fallback={fallback}")
+        fallback = str(Path(__file__).resolve().parent / "static")
+        print(f"⚠️ Указанная директория static не найдена: {static_dir_path}. Попытка использовать fallback: {fallback}")
+        if Path(fallback).exists():
+            static_dir = fallback
+        else:
+            print(f"❌ Ни public, ни settings, ни fallback static путь не найдены. static_dir={static_dir}, fallback={fallback}")
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 

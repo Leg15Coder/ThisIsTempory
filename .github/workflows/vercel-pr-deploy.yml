@@ -32,10 +32,6 @@ jobs:
           echo "Attempting to inspect provided project id and org id"
           vercel projects inspect ${{ secrets.VERCEL_PROJECT_ID }} --token $VERCEL_TOKEN --org ${{ secrets.VERCEL_ORG_ID }} || echo "Project inspect failed"
 
-      - name: Prepare lightweight requirements for preview (safe write)
-        run: |
-          if [ -f requirements_preview.txt ]; then cp requirements_preview.txt requirements.txt; echo "Copied requirements_preview.txt to requirements.txt"; else echo "No requirements_preview.txt found, leaving requirements.txt as-is"; fi
-
       - name: Set up Node (for Vercel CLI compatibility)
         uses: actions/setup-node@v4
         with:
@@ -55,7 +51,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
       - name: Preview healthcheck - /auth/firebase-test
-        if: ${{ success() }}
+        if: ${{ success() && (secrets.FIREBASE_CREDENTIALS != '') }}
         run: |
           PREVIEW_URL="${{ steps.vercel.outputs.preview_url }}"
           if [ -z "$PREVIEW_URL" ]; then PREVIEW_URL="${{ steps.vercel.outputs.url }}"; fi

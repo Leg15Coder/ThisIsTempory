@@ -434,7 +434,6 @@ body {
     color: var(--text-primary);
 }
 
-/* Скрытый текст для доступности (screen-reader only) */
 .sr-only {
     position: absolute !important;
     width: 1px !important;
@@ -446,3 +445,5 @@ body {
     white-space: nowrap !important;
     border: 0 !important;
 }
+
+.auth-container { margin-top: 50px; }

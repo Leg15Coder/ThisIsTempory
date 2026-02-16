@@ -1,6 +1,7 @@
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -38,6 +39,24 @@ class Settings(BaseSettings):
         if url and url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
         return url
+
+    @property
+    def static_path(self) -> str:
+        """Возвращает абсолютный путь к директории static"""
+        p = Path(self.static_dir)
+        if p.is_absolute():
+            return str(p.resolve())
+        project_root = Path(__file__).resolve().parents[2]
+        return str((project_root / self.static_dir).resolve())
+
+    @property
+    def templates_path(self) -> str:
+        """Возвращает абсолютный путь к директории templates"""
+        p = Path(self.templates_dir)
+        if p.is_absolute():
+            return str(p.resolve())
+        project_root = Path(__file__).resolve().parents[2]
+        return str((project_root / self.templates_dir).resolve())
 
 
 @lru_cache()

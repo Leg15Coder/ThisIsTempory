@@ -11,39 +11,28 @@
 
     <title>Motify - Quest Manager</title>
 
-    <!-- Preload critical resources -->
-    <link rel="preconnect" href="{{ url_for('static', path='css/base.css') }}">
+    <link rel="preconnect" href="{{ url_for('static', path='/css/base.css') }}">
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="{{ url_for('static', path='css/base.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/cards.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/modal.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/rarity.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/create.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/sorts.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/today.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', path='css/shop.css') }}">
-    <style>
-        .auth-container { margin-top: 50px; }
-    </style>
-    <!-- Media queries should be last -->
-    <link rel="stylesheet" href="{{ url_for('static', path='css/media.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/cards.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/modal.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/rarity.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/create.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/sorts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/today.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/shop.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/media.css') }}">
 
-    <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', path='favicon.ico') }}" type="image/x-icon">
 
-    <!-- Apple / Windows icons -->
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='icons/icon-192.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='/icons/icon-192.png') }}">
     <link rel="mask-icon" href="{{ url_for('static', path='icons/icon-192.png') }}" color="#6e45e2">
-    <meta name="msapplication-TileImage" content="{{ url_for('static', path='icons/icon-192.png') }}">
+    <meta name="msapplication-TileImage" content="{{ url_for('static', path='/icons/icon-192.png') }}">
 
-    <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', path='manifest.json') }}">
     <meta name="theme-color" content="#6e45e2">
 
-    <!-- Base script -->
     <script src="{{ url_for('static', path='js/base.js') }}" defer></script>
-    <!-- Analytics loader (external) -->
     <script src="{{ url_for('static', path='js/analytics.js') }}" defer></script>
 
     <script>
@@ -61,7 +50,6 @@
     </script>
 </head>
 <body>
-    <!-- Animated background -->
     <div class="gradient-bg" aria-hidden="true">
         <div class="circle"></div>
         <div class="circle"></div>
@@ -71,14 +59,12 @@
         <div class="circle"></div>
     </div>
 
-    <!-- Header -->
     <header class="header" role="banner">
         <button class="menu-btn" id="menuBtn" aria-label="Открыть меню" aria-expanded="false">
             <span class="menu-burger" aria-hidden="true"></span>
         </button>
     </header>
 
-    <!-- Sidebar navigation -->
     <aside class="sidebar" id="sidebar" aria-label="Главное меню">
         <nav>
             <ul class="menu">
@@ -139,13 +125,11 @@
         </nav>
     </aside>
 
-    <!-- Main content -->
     <main class="main" id="main" role="main">
         {% block content %}
         {% endblock %}
     </main>
 
-    <!-- Footer -->
     <footer class="footer" role="contentinfo">
         <div>© 2026 Motify</div>
         <div class="footer-links">

@@ -22,6 +22,10 @@ async def lifespan(app: FastAPI):
     """Lifespan handler: выполняется при старте и завершении приложения"""
     print(f"{settings.app_name} запущен")
     print(f"Database: {settings.database_url}")
+    static_path = getattr(settings, 'static_path', getattr(settings, 'static_dir', None))
+    templates_path = getattr(settings, 'templates_path', getattr(settings, 'templates_dir', None))
+    print(f"Static path: {static_path}")
+    print(f"Templates path: {templates_path}")
     try:
         try:
             import importlib
@@ -55,7 +59,17 @@ app.add_middleware(
     max_age=SESSION_MAX_AGE_IN_SECONDS
 )
 
-app.mount("/static", StaticFiles(directory=settings.static_dir), name="static")
+static_dir = settings.static_path if hasattr(settings, 'static_path') else settings.static_dir
+from pathlib import Path
+if not Path(static_dir).exists():
+    fallback = str(Path(__file__).resolve().parent / "static")
+    print(f"⚠️ Указанная директория static не найдена: {static_dir}. Попытка использовать fallback: {fallback}")
+    if Path(fallback).exists():
+        static_dir = fallback
+    else:
+        print(f"❌ Ни основной, ни fallback static путь не найдены. static_dir={static_dir}, fallback={fallback}")
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 app.include_router(auth_router)
 app.include_router(profile_router)
@@ -64,7 +78,7 @@ app.include_router(tasks_router)
 
 @app.get("/sw.js", include_in_schema=False)
 async def service_worker():
-    return FileResponse(os.path.join(settings.static_dir, "sw.js"), media_type="application/javascript")
+    return FileResponse(os.path.join(static_dir, "sw.js"), media_type="application/javascript")
 
 @app.get("/", response_class=HTMLResponse)
 async def main_landing(request: Request):

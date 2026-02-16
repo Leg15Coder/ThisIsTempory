@@ -10,11 +10,22 @@
         <!-- Аватар и основная информация -->
         <div class="profile-card">
             <div class="avatar-section">
+                {% set avatar = user.avatar_url %}
+                {% if avatar %}
+                    {% if avatar.startswith('http') %}
+                        {% set avatar_src = avatar %}
+                    {% else %}
+                        {% set avatar_src = url_for('static', path=avatar) %}
+                    {% endif %}
+                {% else %}
+                    {% set avatar_src = 'https://ui-avatars.com/api/?name=' + (user.display_name or user.email) + '&background=6e45e2&color=fff&size=200' %}
+                {% endif %}
                 <img
-                    src="{{ user.avatar_url or 'https://ui-avatars.com/api/?name=' + user.display_name + '&background=6e45e2&color=fff&size=200' }}"
+                    src="{{ avatar_src }}"
                     alt="Avatar"
                     class="profile-avatar"
                     id="avatarImage"
+                    onerror="this.onerror=null;this.src='{{ url_for('static', path='img/logo.png') }}';"
                 >
                 <button class="btn-secondary btn-small" onclick="document.getElementById('avatarInput').click()">
                     Изменить фото
@@ -205,6 +216,46 @@
     object-fit: cover;
 }
 
+/* Primary button style for profile actions */
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--epic));
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(110,69,226,0.2);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(110,69,226,0.28);
+}
+
+/* Full width secondary/primary */
+.btn-full {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+}
+
+/* Ensure secondary has consistent look */
+.btn-secondary {
+    background: rgba(110, 69, 226, 0.12);
+    border: 1px solid rgba(110,69,226,0.25);
+    color: var(--accent);
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.12s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(110, 69, 226, 0.22);
+}
+
 .profile-info {
     text-align: center;
 }
@@ -244,25 +295,6 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-}
-
-.btn-secondary {
-    background: rgba(110, 69, 226, 0.15);
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    padding: 0.75rem 1.5rem;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.btn-secondary:hover {
-    background: rgba(110, 69, 226, 0.25);
-}
-
-.btn-small {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
 }
 
 .success-message {

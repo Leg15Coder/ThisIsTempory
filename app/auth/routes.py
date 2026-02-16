@@ -16,6 +16,7 @@ from app.auth.firebase_auth import firebase_service
 from app.auth.dependencies import get_current_user, require_user
 from app.core.fastapi_config import templates
 from app.auth.mail_utils import send_verification_email
+from app.auth.firebase_admin import get_firestore_client
 import secrets
 from datetime import timedelta
 
@@ -251,3 +252,17 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
 @router.get('/firebase-action', response_class=HTMLResponse)
 async def firebase_action(request: Request):
     return templates.TemplateResponse('firebase_action.html', {'request': request})
+
+@router.get('/firebase-test')
+async def firebase_test():
+    """Простой endpoint для проверки соединения с Firestore. Возвращает basic info или ошибку."""
+    client = get_firestore_client()
+    if not client:
+        return HTMLResponse(content='Firestore не настроен (нет credentials)', status_code=500)
+
+    try:
+        cols = list(client.collections())
+        names = [c.id for c in cols[:10]]
+        return {"status": "ok", "collections_sample": names}
+    except Exception as e:
+        return HTMLResponse(content=f'Ошибка при обращении к Firestore: {e}', status_code=500)

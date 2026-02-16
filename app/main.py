@@ -1,7 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -61,6 +61,10 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(shop_routes.router)
 app.include_router(tasks_router)
+
+@app.get("/sw.js", include_in_schema=False)
+async def service_worker():
+    return FileResponse(os.path.join(settings.static_dir, "sw.js"), media_type="application/javascript")
 
 @app.get("/", response_class=HTMLResponse)
 async def main_landing(request: Request):

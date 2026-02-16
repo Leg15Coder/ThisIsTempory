@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="description" content="The Last Reality - Превратите свои задачи в эпические квесты с системой редкости и зависимостей">
+    <meta name="description" content="Motify - Превратите свои задачи в эпические квесты с системой редкости и зависимостей">
     <meta name="theme-color" content="#6e45e2">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
 
-    <title>The Last Reality - Quest Manager</title>
+    <title>Motify - Quest Manager</title>
 
     <!-- Preload critical resources -->
     <link rel="preconnect" href="{{ url_for('static', path='css/base.css') }}">
@@ -32,10 +32,33 @@
     <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', path='favicon.ico') }}" type="image/x-icon">
 
+    <!-- Apple / Windows icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='icons/icon-192.png') }}">
+    <link rel="mask-icon" href="{{ url_for('static', path='icons/icon-192.png') }}" color="#6e45e2">
+    <meta name="msapplication-TileImage" content="{{ url_for('static', path='icons/icon-192.png') }}">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', path='manifest.json') }}">
+    <meta name="theme-color" content="#6e45e2">
+
     <!-- Base script -->
     <script src="{{ url_for('static', path='js/base.js') }}" defer></script>
     <!-- Analytics loader (external) -->
     <script src="{{ url_for('static', path='js/analytics.js') }}" defer></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
 </head>
 <body>
     <!-- Animated background -->
@@ -124,7 +147,7 @@
 
     <!-- Footer -->
     <footer class="footer" role="contentinfo">
-        <div>© 2025 The Last Reality</div>
+        <div>© 2026 Motify</div>
         <div class="footer-links">
             <a href="https://t.me/dimka_ryaz" class="footer-link" target="_blank" rel="noopener">Контакты</a>
             <a href="{{ (base_url|default('/quest-app')) }}/help" class="footer-link">Помощь</a>

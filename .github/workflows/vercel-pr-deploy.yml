@@ -21,10 +21,14 @@ jobs:
           if [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then echo 'ERROR: VERCEL_PROJECT_ID is not set in repository secrets'; exit 1; fi
           if [ -z "${{ secrets.FIREBASE_CREDENTIALS }}" ]; then echo 'WARNING: FIREBASE_CREDENTIALS is not set. Preview deploy will still run but Firestore tests may fail'; fi
 
+      - name: Prepare lightweight requirements for preview
+        run: |
+          if [ -f requirements_preview.txt ]; then cp requirements_preview.txt requirements.txt; echo "Using requirements_preview.txt for faster preview build"; else echo "No requirements_preview.txt found"; fi
+
       - name: Set up Node (for Vercel CLI compatibility)
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Vercel Preview Deploy
         id: vercel
@@ -35,7 +39,7 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: .
-          vercel-args: '--confirm'
+          vercel-args: '--yes'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 

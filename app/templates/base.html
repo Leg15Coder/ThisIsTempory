@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/create.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/sorts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/today.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/shop.css') }}">
     <style>
         .auth-container { margin-top: 50px; }
     </style>
@@ -60,40 +61,55 @@
             <ul class="menu">
                 {% if current_user %}
                 <li class="menu-item">
-                    <a href="/profile" class="menu-link">
+                    <a href="{{ url_for('profile_page') }}" class="menu-link">
                         <span aria-hidden="true">👤</span> Профиль
                     </a>
                 </li>
                 {% else %}
                 <li class="menu-item">
-                    <a href="/auth/login" class="menu-link">
+                    <a href="{{ url_for('login_page') }}" class="menu-link">
                         <span aria-hidden="true">🔐</span> Вход
                     </a>
                 </li>
                 <li class="menu-item">
-                    <a href="/auth/register" class="menu-link">
+                    <a href="{{ url_for('register_page') }}" class="menu-link">
                         <span aria-hidden="true">✨</span> Регистрация
                     </a>
                 </li>
                 {% endif %}
                 <li class="menu-item">
-                    <a href="{{ base_url }}/create" class="menu-link">
+                    <a href="{{ (base_url|default('/quest-app')) }}/create" class="menu-link">
                         <span aria-hidden="true">✏️</span> Создать
                     </a>
                 </li>
                 <li class="menu-item">
-                    <a href="{{ base_url }}" class="menu-link">
+                    <a href="{{ base_url|default('/quest-app') }}" class="menu-link">
                         <span aria-hidden="true">⚔️</span> Квесты
                     </a>
                 </li>
                 <li class="menu-item">
-                    <a href="{{ base_url }}/today" class="menu-link">
+                    <a href="{{ base_url|default('/quest-app') }}/today" class="menu-link">
                         <span aria-hidden="true">📅</span> На сегодня
                     </a>
                 </li>
                 <li class="menu-item">
-                    <a href="{{ base_url }}/archive" class="menu-link">
+                    <a href="{{ base_url|default('/quest-app') }}/archive" class="menu-link">
                         <span aria-hidden="true">📚</span> История
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ url_for('shop_page') }}" class="menu-link">
+                        <span aria-hidden="true">🛒</span> Магазин
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ url_for('inventory_page') }}" class="menu-link">
+                        <span aria-hidden="true">🎒</span> Инвентарь
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ url_for('quest_templates_page') }}" class="menu-link">
+                        <span aria-hidden="true">🔄</span> Периодические
                     </a>
                 </li>
             </ul>
@@ -111,7 +127,7 @@
         <div>© 2025 The Last Reality</div>
         <div class="footer-links">
             <a href="https://t.me/dimka_ryaz" class="footer-link" target="_blank" rel="noopener">Контакты</a>
-            <a href="{{ base_url }}/help" class="footer-link">Помощь</a>
+            <a href="{{ (base_url|default('/quest-app')) }}/help" class="footer-link">Помощь</a>
         </div>
     </footer>
 </body>

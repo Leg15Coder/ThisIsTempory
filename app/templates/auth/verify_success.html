@@ -3,6 +3,6 @@
 <div class="centered-panel">
   <h2>Почта подтверждена</h2>
   <p>{{ message }}</p>
-  <p><a href="/auth/login">Войти</a></p>
+  <p><a href="{{ url_for('login_page') }}">Войти</a></p>
 </div>
 {% endblock %}

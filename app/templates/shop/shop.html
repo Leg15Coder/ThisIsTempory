@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shop-container">
+    <div class="shop-header">
+        <h1 class="shop-title">Магазин артефактов</h1>
+        <div class="currency-display">
+            💰 Баланс: <span id="currencyValue">{{ current_user.currency if current_user else 0 }}</span>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h2>Создать предмет</h2>
+        <form id="createItemForm" class="quest-form">
+            <div class="form-row">
+                <div class="form-group-modern half">
+                    <label class="label-small">Название</label>
+                    <input type="text" name="name" class="input-modern" required>
+                </div>
+                <div class="form-group-modern half">
+                    <label class="label-small">Цена (монеты)</label>
+                    <input type="number" name="price" class="input-modern" min="0" value="0" required>
+                </div>
+            </div>
+            <div class="form-group-modern">
+                <label class="label-small">Описание</label>
+                <textarea name="description" rows="2" class="textarea-modern"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group-modern half">
+                    <label class="label-small">Редкость</label>
+                    <select name="rarity" class="select-modern">
+                        <option value="Обычный">Обычный</option>
+                        <option value="Необычный">Необычный</option>
+                        <option value="Редкий">Редкий</option>
+                        <option value="Эпический">Эпический</option>
+                        <option value="Легендарный">Легендарный</option>
+                    </select>
+                </div>
+                <div class="form-group-modern half">
+                    <label class="label-small">Иконка (эмодзи)</label>
+                    <input type="text" name="icon" class="input-modern" placeholder="✨">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group-modern half">
+                    <label class="label-small">Количество на складе</label>
+                    <input type="number" name="stock" class="input-modern" min="0" placeholder="Пусто = бесконечно">
+                </div>
+                <div class="form-group-modern half">
+                    <label class="toggle-container">
+                        <input type="checkbox" name="is_available" checked>
+                        <span class="toggle-switch"></span>
+                        <span class="label-text">Доступен для покупки</span>
+                    </label>
+                </div>
+            </div>
+            <button type="submit" class="btn-create-quest">Создать предмет</button>
+        </form>
+    </div>
+
+    <div class="form-section">
+        <h2>Доступные предметы</h2>
+        <div id="shopList" class="shop-grid"></div>
+        <div id="shopEmpty" class="empty-state" style="display:none;">Пока нет предметов</div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', path='js/shop.js') }}" defer></script>
+{% endblock %}
+

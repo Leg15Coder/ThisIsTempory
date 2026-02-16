@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="shop-container">
+    <div class="shop-header">
+        <h1 class="shop-title">Периодические квесты</h1>
+        <div class="currency-display">
+            🔄 Создавайте квесты по расписанию
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h2>Создать шаблон</h2>
+        <form id="createTemplateForm" class="quest-form">
+            <div class="form-group-modern">
+                <label class="label-small">Название</label>
+                <input type="text" name="title" class="input-modern" required>
+            </div>
+            <div class="form-group-modern">
+                <label class="label-small">Описание</label>
+                <textarea name="description" rows="2" class="textarea-modern"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group-modern half">
+                    <label class="label-small">Награда</label>
+                    <input type="number" name="cost" class="input-modern" min="0" value="0" required>
+                </div>
+                <div class="form-group-modern half">
+                    <label class="label-small">Редкость</label>
+                    <select name="rarity" class="select-modern">
+                        <option value="Обычный">Обычный</option>
+                        <option value="Необычный">Необычный</option>
+                        <option value="Редкий">Редкий</option>
+                        <option value="Эпический">Эпический</option>
+                        <option value="Легендарный">Легендарный</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group-modern half">
+                    <label class="label-small">Тип повторения</label>
+                    <select name="recurrence_type" class="select-modern" id="tplRecurrenceType">
+                        <option value="daily">Ежедневно</option>
+                        <option value="weekly">По дням недели</option>
+                        <option value="interval">Через интервал</option>
+                    </select>
+                </div>
+                <div class="form-group-modern half">
+                    <label class="label-small">Длительность (часы)</label>
+                    <input type="number" name="duration_hours" class="input-modern" min="1" value="24">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group-modern half">
+                    <label class="label-small">Дата первого запуска</label>
+                    <input type="date" name="start_date" class="input-modern" id="tplStartDate">
+                </div>
+                <div class="form-group-modern half">
+                    <label class="label-small">Время запуска</label>
+                    <input type="time" name="start_time" class="input-modern" id="tplStartTime">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group-modern half">
+                    <label class="label-small">Повторять до даты</label>
+                    <input type="date" name="end_date" class="input-modern" id="tplEndDate">
+                </div>
+                <div class="form-group-modern half">
+                    <label class="label-small">Время окончания</label>
+                    <input type="time" name="end_time" class="input-modern" id="tplEndTime">
+                </div>
+            </div>
+
+            <div class="form-group-modern" id="tplWeekdays" style="display:none;">
+                <label class="label-small">Дни недели</label>
+                <div class="weekdays-selector">
+                    <label><input type="checkbox" name="weekdays" value="0"> Пн</label>
+                    <label><input type="checkbox" name="weekdays" value="1"> Вт</label>
+                    <label><input type="checkbox" name="weekdays" value="2"> Ср</label>
+                    <label><input type="checkbox" name="weekdays" value="3"> Чт</label>
+                    <label><input type="checkbox" name="weekdays" value="4"> Пт</label>
+                    <label><input type="checkbox" name="weekdays" value="5"> Сб</label>
+                    <label><input type="checkbox" name="weekdays" value="6"> Вс</label>
+                </div>
+            </div>
+
+            <div class="form-group-modern" id="tplInterval" style="display:none;">
+                <label class="label-small">Интервал (часы)</label>
+                <input type="number" name="interval_hours" class="input-modern" min="1" placeholder="Например: 12">
+            </div>
+
+            <button type="submit" class="btn-create-quest">Создать шаблон</button>
+        </form>
+    </div>
+
+    <div class="form-section">
+        <h2>Ваши шаблоны</h2>
+        <div id="templateList"></div>
+        <div id="templateEmpty" class="empty-state" style="display:none;">Пока нет шаблонов</div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', path='js/quest_templates.js') }}" defer></script>
+{% endblock %}

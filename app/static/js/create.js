@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
         questForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            // Подготовка данных подзадач
+            // Подготовка данных подзадач (мы собираем их в массив объектов)
             const subtasksData = subtasks.map(st => {
                 const baseData = {
                     type: st.type,
@@ -316,23 +316,54 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Создание скрытых полей для подзадач
-            subtasksData.forEach(subtask => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'subtasks';
-                input.value = JSON.stringify(subtask);
-                this.appendChild(input);
-            });
+            // Удаляем старые скрытые поля subtasks (на случай если были)
+            const oldInputs = this.querySelectorAll('input[name="subtasks"]');
+            oldInputs.forEach(input => input.remove());
 
-            // Отправка формы
+            // Создаем одно поле с JSON массивом
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'subtasks';
+            input.value = JSON.stringify(subtasksData);
+            this.appendChild(input);
+
             this.submit();
         });
     }
 
-    // ============================================
-    // ИНИЦИАЛИЗАЦИЯ
-    // ============================================
+    const isRecurrence = document.getElementById('isRecurrence');
+    const recurrenceOptions = document.getElementById('recurrenceOptions');
+    const recurrenceType = document.getElementById('recurrenceType');
+    const weeklyOptions = document.getElementById('weeklyOptions');
+    const intervalOptions = document.getElementById('intervalOptions');
+    const recurrenceEnd = document.getElementById('recurrenceEnd');
+
+    if (isRecurrence && recurrenceOptions) {
+        isRecurrence.addEventListener('change', function() {
+            if (this.checked) {
+                recurrenceOptions.style.display = 'block';
+                if (recurrenceEnd) recurrenceEnd.style.display = 'flex';
+            } else {
+                recurrenceOptions.style.display = 'none';
+                if (recurrenceEnd) recurrenceEnd.style.display = 'none';
+            }
+        });
+    }
+
+    if (recurrenceType) {
+        recurrenceType.addEventListener('change', function() {
+            // Скрываем все опции
+            if (weeklyOptions) weeklyOptions.style.display = 'none';
+            if (intervalOptions) intervalOptions.style.display = 'none';
+
+            // Показываем нужные
+            if (this.value === 'weekly' && weeklyOptions) {
+                weeklyOptions.style.display = 'block';
+            } else if (this.value === 'interval' && intervalOptions) {
+                intervalOptions.style.display = 'block';
+            }
+        });
+    }
 
     toggleEmptyState();
 });

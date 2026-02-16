@@ -133,6 +133,10 @@ class QuestService:
         if quest:
             quest.status = QuestStatus.finished
             self._update_children_status(quest)
+
+            if quest.user:
+                quest.user.currency += quest.cost
+
             self.db.commit()
         return quest
 

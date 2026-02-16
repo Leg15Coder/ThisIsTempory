@@ -38,8 +38,13 @@ class User(Base):
     language = Column(String, default="ru")
     notifications_enabled = Column(Boolean, default=True)
 
+    currency = Column(Integer, default=0)
+
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     quests = relationship("Quest", back_populates="user", cascade="all, delete-orphan")
+    quest_templates = relationship("QuestTemplate", back_populates="user", cascade="all, delete-orphan")
+    shop_items = relationship("ShopItem", back_populates="user", cascade="all, delete-orphan")
+    inventory_items = relationship("Inventory", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User {self.email}>"

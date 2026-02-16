@@ -370,11 +370,10 @@ if (passwordForm) {
     });
 }
 
-// Выход
 document.getElementById('logoutBtn').addEventListener('click', async () => {
     try {
         await fetch('/auth/logout', { method: 'POST' });
-        window.location.href = '/auth/login';
+        window.location.href = '{{ url_for('login_page') }}';
     } catch (error) {
         showError('Ошибка выхода');
     }
@@ -396,4 +395,3 @@ function showError(message) {
 </script>
 
 {% endblock %}
-

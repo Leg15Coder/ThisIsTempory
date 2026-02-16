@@ -75,7 +75,7 @@
         {% endif %}
 
         <div class="auth-footer">
-            <p>Уже есть аккаунт? <a href="/auth/login" class="auth-link">Войти</a></p>
+            <p>Уже есть аккаунт? <a href="{{ url_for('login_page') }}" class="auth-link">Войти</a></p>
         </div>
 
         <div id="errorMessage" class="error-message" style="display: none;"></div>
@@ -238,7 +238,7 @@ import { auth, googleProvider, signInWithPopup } from "{{ url_for('static', path
 function getNextRedirect() {
     const params = new URLSearchParams(window.location.search);
     const next = params.get('next');
-    return next || '/quest-app';
+    return next || '{{ base_url|default('/quest-app') }}';
 }
 
 document.getElementById('registerForm').addEventListener('submit', async (e) => {

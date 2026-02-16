@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.tasks.main import router as tasks_router
 from app.auth.routes import router as auth_router
 from app.auth.profile_routes import router as profile_router
+import app.shop.routes as shop_routes
 
 SESSION_MAX_AGE_IN_SECONDS = 86400 * 30
 
@@ -29,7 +30,8 @@ async def lifespan(app: FastAPI):
             print('⚠️ Предупреждение: не удалось импортировать модели аутентификации при старте:', e)
 
         try:
-            from app.tasks.database import Base, engine
+            from app.tasks.database import Base, engine, ensure_db_migrations
+            ensure_db_migrations()
             Base.metadata.create_all(bind=engine)
             print('✅ Таблицы БД проверены/созданы (create_all)')
         except Exception as e:
@@ -57,6 +59,7 @@ app.mount("/static", StaticFiles(directory=settings.static_dir), name="static")
 
 app.include_router(auth_router)
 app.include_router(profile_router)
+app.include_router(shop_routes.router)
 app.include_router(tasks_router)
 
 @app.get("/", response_class=HTMLResponse)
@@ -68,6 +71,18 @@ async def main_landing(request: Request):
         return RedirectResponse(url="/quest-app", status_code=303)
     else:
         return templates.TemplateResponse("land.html", {"request": request})
+
+@app.get("/archive")
+async def redirect_archive():
+    return RedirectResponse(url=f"{settings.root_path if hasattr(settings,'root_path') else ''}/quest-app/archive", status_code=303)
+
+@app.get("/archive/")
+async def redirect_archive_slash():
+    return RedirectResponse(url=f"{settings.root_path if hasattr(settings,'root_path') else ''}/quest-app/archive", status_code=303)
+
+@app.get("/quest-app")
+async def redirect_quest_app_root():
+    return RedirectResponse(url=f"{settings.root_path if hasattr(settings,'root_path') else ''}/quest-app/", status_code=307)
 
 @app.middleware("http")
 async def security_headers_middleware(request, call_next):

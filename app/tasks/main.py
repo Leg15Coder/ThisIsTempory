@@ -12,6 +12,8 @@ from app.tasks.database import QuestStatus, QuestRarity, Quest, get_db
 from app.tasks.service import QuestService, SubtaskService
 from app.auth.dependencies import require_user
 from app.auth.models import User
+from app.shop.service import QuestTemplateService
+from app.shop.schemas import QuestTemplateCreate
 
 BASE_URL = '/quest-app'
 router = APIRouter(prefix=BASE_URL)
@@ -116,6 +118,45 @@ async def create_quest(
     cost: int = Form(...)
 ):
     """Создание нового квеста"""
+
+    form_data = await request.form()
+    is_recurrence = form_data.get("is_recurrence") == "on"
+
+    if is_recurrence:
+        try:
+            recurrence_type = form_data.get("recurrence_type")
+            duration_hours_str = form_data.get("duration_hours")
+            duration_hours = int(duration_hours_str) if duration_hours_str else 24
+
+            interval_hours_str = form_data.get("interval_hours")
+            interval_hours = int(interval_hours_str) if interval_hours_str else None
+
+            weekdays_list = form_data.getlist("weekdays")
+            weekdays = ",".join(weekdays_list) if weekdays_list else None
+
+            template_data = QuestTemplateCreate(
+                title=title,
+                author=author,
+                description=description,
+                cost=cost,
+                rarity=rarity.value,
+                recurrence_type=recurrence_type,
+                duration_hours=duration_hours,
+                weekdays=weekdays,
+                interval_hours=interval_hours,
+                start_date=form_data.get("start_date"),
+                start_time=form_data.get("start_time"),
+                end_date=form_data.get("end_date"),
+                end_time=form_data.get("end_time"),
+                is_active=True
+            )
+
+            QuestTemplateService.create_template(service.db, current_user.id, template_data)
+
+            return RedirectResponse(url="/quest-templates", status_code=status.HTTP_303_SEE_OTHER)
+        except Exception as e:
+            print(f"Ошибка создания шаблона: {e}")
+
     parsed_deadline = None
     if deadline_date or deadline_time:
         if not deadline_time:

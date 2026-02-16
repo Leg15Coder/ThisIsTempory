@@ -22,14 +22,30 @@ async def get_current_user(
             user_id = payload.get('sub')
             if user_id is None:
                 return None
-            user = db.query(User).filter(User.id == int(user_id)).first()
+            try:
+                user = db.query(User).filter(User.id == int(user_id)).first()
+            except Exception as e:
+                try:
+                    from app.tasks.database import ensure_db_migrations
+                    ensure_db_migrations()
+                    user = db.query(User).filter(User.id == int(user_id)).first()
+                except Exception:
+                    user = None
             return user
         except Exception:
             return None
 
     user_id = request.session.get('user_id')
     if user_id:
-        user = db.query(User).filter(User.id == user_id).first()
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+        except Exception as e:
+            try:
+                from app.tasks.database import ensure_db_migrations
+                ensure_db_migrations()
+                user = db.query(User).filter(User.id == user_id).first()
+            except Exception:
+                user = None
         return user
 
     return None

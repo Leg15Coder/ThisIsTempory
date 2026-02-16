@@ -149,19 +149,115 @@
                             size="5"
                         >
                             {% for available_quest in available_quests %}
-                            <option value="{{ available_quest.id }}"
-                                    data-title="{{ available_quest.title }}"
-                                    data-status="{{ available_quest.status.value }}">
-                                #{{ available_quest.id }} - {{ available_quest.title }}
-                                ({{ available_quest.rarity.value }})
+                            <option value="{{ available_quest.id }}" title="{{ available_quest.description }}">
+                                #{{ available_quest.id }} - {{ available_quest.title }} ({{ available_quest.rarity.value }})
                             </option>
                             {% endfor %}
                         </select>
+                        <div class="help-text">Удерживайте Ctrl (Windows) или Cmd (Mac) для выбора нескольких вариантов</div>
                     </div>
-                    <div class="selected-parents" id="selectedParents"></div>
-                    <div class="hint">
-                        <span class="icon">ℹ️</span>
-                        Квест будет "Неактивным" пока не завершатся все родительские квесты
+                </div>
+            </div>
+        </details>
+
+        <!-- Периодичность (Accordion) -->
+        <details class="form-accordion">
+            <summary class="accordion-header">
+                <span class="accordion-title">
+                    <span class="icon">🔄</span> Периодичность
+                </span>
+                <span class="accordion-arrow">▼</span>
+            </summary>
+            <div class="accordion-content">
+                <div class="form-group-modern">
+                    <label class="toggle-container">
+                        <input type="checkbox" id="isRecurrence" name="is_recurrence">
+                        <span class="toggle-switch"></span>
+                        <span class="label-text">Создать шаблон периодического квеста</span>
+                    </label>
+                </div>
+
+                <div id="recurrenceOptions" style="display: none; margin-top: 1rem;">
+                    <div class="form-row">
+                        <div class="form-group-modern half">
+                            <label for="recurrenceType" class="label-small">Тип повторения</label>
+                            <select id="recurrenceType" class="select-modern" name="recurrence_type">
+                                <option value="daily">🗓️ Ежедневно</option>
+                                <option value="weekly">📅 По дням недели</option>
+                                <option value="interval">⏱️ Через интервал</option>
+                            </select>
+                        </div>
+                        <div class="form-group-modern half">
+                            <label for="questDuration" class="label-small">Длительность (часы)</label>
+                            <input
+                                type="number"
+                                id="questDuration"
+                                name="duration_hours"
+                                class="input-modern"
+                                min="1"
+                                value="24"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group-modern half">
+                            <label for="recurrenceStartDate" class="label-small">Дата первого запуска</label>
+                            <input
+                                type="date"
+                                id="recurrenceStartDate"
+                                name="start_date"
+                                class="input-modern"
+                            >
+                        </div>
+                        <div class="form-group-modern half">
+                            <label for="recurrenceStartTime" class="label-small">Время запуска</label>
+                            <input
+                                type="time"
+                                id="recurrenceStartTime"
+                                name="start_time"
+                                class="input-modern"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Опции для weekly -->
+                    <div id="weeklyOptions" class="form-group-modern" style="display: none;">
+                        <label class="label-small">Дни недели</label>
+                        <div class="weekdays-selector">
+                            <label><input type="checkbox" name="weekdays" value="0"> <span>Пн</span></label>
+                            <label><input type="checkbox" name="weekdays" value="1"> <span>Вт</span></label>
+                            <label><input type="checkbox" name="weekdays" value="2"> <span>Ср</span></label>
+                            <label><input type="checkbox" name="weekdays" value="3"> <span>Чт</span></label>
+                            <label><input type="checkbox" name="weekdays" value="4"> <span>Пт</span></label>
+                            <label><input type="checkbox" name="weekdays" value="5"> <span>Сб</span></label>
+                            <label><input type="checkbox" name="weekdays" value="6"> <span>Вс</span></label>
+                        </div>
+                    </div>
+
+                    <!-- Опции для interval -->
+                    <div id="intervalOptions" class="form-group-modern" style="display: none;">
+                        <label for="intervalHours" class="label-small">Интервал повторения (часы)</label>
+                        <input
+                            type="number"
+                            id="intervalHours"
+                            name="interval_hours"
+                            class="input-modern"
+                            min="1"
+                            placeholder="Например: 12"
+                        >
+                    </div>
+
+                    <!-- Окончание повтора -->
+                    <div id="recurrenceEnd" class="form-row" style="margin-top:0.8rem; display:none;">
+                        <div class="form-group-modern half">
+                            <label for="recurrenceEndDate" class="label-small">Повторять до даты</label>
+                            <input type="date" id="recurrenceEndDate" name="end_date" class="input-modern">
+                        </div>
+                        <div class="form-group-modern half">
+                            <label for="recurrenceEndTime" class="label-small">Время окончания (опционально)</label>
+                            <input type="time" id="recurrenceEndTime" name="end_time" class="input-modern">
+                        </div>
                     </div>
                 </div>
             </div>

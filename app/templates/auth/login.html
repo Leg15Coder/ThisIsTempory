@@ -8,7 +8,6 @@
             <p class="auth-subtitle">Войдите, чтобы продолжить эпическое путешествие</p>
         </div>
 
-        <!-- Email/Password Login -->
         <form id="loginForm" class="auth-form">
             <div class="form-group">
                 <label for="email" class="label-small">Email</label>
@@ -210,85 +209,11 @@
 }
 </style>
 
-<script type="module">
-import { auth, googleProvider, signInWithPopup } from "{{ url_for('static', path='js/firebase-config.js') }}";
+<!-- Configuration for JS (safe, non-inline data) -->
+<div id="appConfig" style="display:none;"
+     data-firebase-enabled="{{ '1' if firebase_enabled else '0' }}"
+     data-base-url="{{ base_url|default('/quest-app') }}"></div>
 
-function getNextRedirect() {
-    const params = new URLSearchParams(window.location.search);
-    const next = params.get('next');
-    return next || '{{ base_url|default('/quest-app') }}';
-}
-
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const formData = {
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value
-    };
-
-    try {
-        const response = await fetch('/auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-
-        if (response.ok) {
-            const redirectTo = getNextRedirect();
-            window.location.href = redirectTo;
-        } else {
-            const error = await response.json();
-            showError(error.detail || 'Ошибка входа');
-        }
-    } catch (error) {
-        showError('Ошибка соединения с сервером');
-    }
-});
-
-function showError(message) {
-    const errorDiv = document.getElementById('errorMessage');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-}
-
-// Firebase/Google Auth (если включен)
-{% if firebase_enabled %}
-const googleBtn = document.getElementById('googleLoginBtn');
-if (googleBtn) {
-    googleBtn.addEventListener('click', async () => {
-        try {
-            const result = await signInWithPopup(auth, googleProvider);
-            const idToken = await result.user.getIdToken();
-
-            const response = await fetch('/auth/google', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_token: idToken })
-            });
-
-            if (response.ok) {
-                const redirectTo = getNextRedirect();
-                window.location.href = redirectTo;
-            } else {
-                const err = await response.json();
-                showError(err.detail || 'Ошибка Google аутентификации');
-            }
-        } catch (err) {
-            console.error('Google sign in error:', err);
-            // Специальная подсказка для неразрешённого домена
-            if (err && err.code === 'auth/unauthorized-domain') {
-                const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
-                showError('Ошибка Google Sign-In: домен приложения не добавлен в разрешённые домены Firebase. Добавьте ' + origin + ' в список Authorized domains в Firebase Console.');
-            } else {
-                showError('Ошибка входа через Google');
-            }
-        }
-    });
-}
-{% endif %}
-</script>
+<script type="module" src="{{ url_for('static', path='js/login-auth.js') }}"></script>
 
 {% endblock %}

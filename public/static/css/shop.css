@@ -1,0 +1,251 @@
+.shop-container {
+    padding: 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.shop-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.shop-title {
+    font-size: 2rem;
+    background: linear-gradient(135deg, #ffd700, #f39c12);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.currency-display {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    font-size: 1.2rem;
+    color: #ffd700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.shop-item-card {
+    background: rgba(30, 30, 40, 0.8);
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.shop-item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(110, 69, 226, 0.3);
+    border-color: rgba(110, 69, 226, 0.5);
+}
+
+.item-visual {
+    height: 150px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 4rem;
+    position: relative;
+}
+
+.item-rarity-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.item-details {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.item-name {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.item-description {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1rem;
+    flex-grow: 1;
+    line-height: 1.4;
+}
+
+.item-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.item-price {
+    font-weight: bold;
+    color: #ffd700;
+    font-size: 1.1rem;
+}
+
+.btn-buy, .btn-use {
+    background: linear-gradient(135deg, #6e45e2, #88d3ce);
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: filter 0.2s;
+    font-weight: 500;
+}
+
+.btn-buy:hover, .btn-use:hover {
+    filter: brightness(1.1);
+}
+
+.btn-buy:disabled {
+    background: #555;
+    cursor: not-allowed;
+    filter: none;
+}
+
+/* Rarity Colors */
+.rarity-common .item-rarity-badge { color: #b0b0b0; border: 1px solid #b0b0b0; }
+.rarity-uncommon .item-rarity-badge { color: #1eff00; border: 1px solid #1eff00; }
+.rarity-rare .item-rarity-badge { color: #0070dd; border: 1px solid #0070dd; }
+.rarity-epic .item-rarity-badge { color: #a335ee; border: 1px solid #a335ee; }
+.rarity-legendary .item-rarity-badge { color: #ff8000; border: 1px solid #ff8000; }
+
+/* Inventory Specific */
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.item-qty {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.6);
+}
+
+/* Modal for Shop Item Creation */
+.modal-content {
+    background: #1e1e28;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Quest Templates */
+.template-card {
+    background: rgba(30, 30, 40, 0.8);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.template-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: #fff;
+}
+
+.template-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.6);
+}
+
+.badge {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.1);
+    font-size: 0.8rem;
+}
+
+/* Recurrence Inputs in Create Form */
+.weekdays-selector {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
+.weekdays-selector label {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(255,255,255,0.05);
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.weekdays-selector label:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+}
+
+.toggle-switch {
+    width: 40px;
+    height: 20px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    position: relative;
+    transition: background 0.3s;
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+input[type="checkbox"]:checked + .toggle-switch {
+    background: #6e45e2;
+}
+
+input[type="checkbox"]:checked + .toggle-switch::after {
+    transform: translateX(20px);
+}

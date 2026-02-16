@@ -120,3 +120,16 @@ async def security_headers_middleware(request, call_next):
     )
     response.headers["Content-Security-Policy"] = csp
     return response
+
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    public_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'public', 'favicon.ico')
+    public_path = os.path.normpath(public_path)
+
+    if os.path.exists(public_path):
+        return FileResponse(public_path, media_type='image/x-icon')
+
+    static_fav = os.path.join(static_dir, 'favicon.ico')
+    if os.path.exists(static_fav):
+        return FileResponse(static_fav, media_type='image/x-icon')
+    return FileResponse(os.path.join(static_dir, 'icons', 'icon-192.png'), media_type='image/png')

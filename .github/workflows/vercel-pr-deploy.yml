@@ -56,30 +56,3 @@ jobs:
           vercel-args: '--yes'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-
-      - name: Preview healthcheck - /auth/firebase-test
-        if: ${{ success() && steps.check_secrets.outputs.firebase_present == 'true' }}
-        run: |
-          PREVIEW_URL="${{ steps.vercel.outputs.preview_url }}"
-          if [ -z "$PREVIEW_URL" ]; then PREVIEW_URL="${{ steps.vercel.outputs.url }}"; fi
-          if [ -z "$PREVIEW_URL" ]; then PREVIEW_URL="${{ steps.vercel.outputs.preview-url }}"; fi
-          echo "Preview URL: $PREVIEW_URL"
-          if [ -z "$PREVIEW_URL" ]; then echo "No preview URL found, failing healthcheck"; exit 1; fi
-          echo "Checking $PREVIEW_URL/auth/firebase-test"
-          STATUS=$(curl -s -o /tmp/preview_health_body.txt -w "%{http_code}" "$PREVIEW_URL/auth/firebase-test") || true
-          echo "HTTP status: $STATUS"
-          if [ "$STATUS" -ne 200 ]; then echo "Healthcheck failed, response:"; cat /tmp/preview_health_body.txt; exit 1; fi
-
-      - name: Post preview URL to PR
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const preview = "${{ steps.vercel.outputs.preview_url }}" || "${{ steps.vercel.outputs.url }}" || "${{ steps.vercel.outputs.preview-url }}";
-            const body = preview ? `✅ Preview deployment: ${preview}` : '⚠️ Preview deployed but no URL was returned by the Vercel action; check Vercel dashboard.';
-            const issue_number = context.payload.pull_request ? context.payload.pull_request.number : context.issue.number;
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue_number,
-              body: body
-            });

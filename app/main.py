@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.fastapi_config import templates
 from app.core.config import get_settings
@@ -13,6 +14,8 @@ from app.tasks.main import router as tasks_router
 from app.auth.routes import router as auth_router
 from app.auth.profile_routes import router as profile_router
 import app.shop.routes as shop_routes
+from app.tasks.database import SessionLocal
+from app.auth.models import User as AuthUser
 
 SESSION_MAX_AGE_IN_SECONDS = 86400 * 30
 
@@ -59,6 +62,31 @@ app.add_middleware(
     secret_key=os.getenv("SESSION_SECRET_KEY", "your-secret-key-change-in-production"),
     max_age=SESSION_MAX_AGE_IN_SECONDS
 )
+
+
+class CurrentUserMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        request.state.current_user = None
+        try:
+            user_id = None
+            try:
+                user_id = request.session.get('user_id')
+            except Exception:
+                user_id = None
+
+            if user_id:
+                db = SessionLocal()
+                try:
+                    user = db.query(AuthUser).filter(AuthUser.id == user_id).first()
+                    request.state.current_user = user
+                finally:
+                    db.close()
+        except Exception as e:
+            print('Ошибка при получении current_user в CurrentUserMiddleware:', e)
+        response = await call_next(request)
+        return response
+
+app.add_middleware(CurrentUserMiddleware)
 
 
 project_root = Path(__file__).resolve().parent.parent
@@ -124,9 +152,9 @@ async def security_headers_middleware(request, call_next):
     csp = (
         "default-src 'self' 'unsafe-inline' https:; "
         "img-src 'self' data: https:; "
-        "connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://apis.google.com https://the-perfect-world-eeddf.firebaseapp.com https://the-perfect-world-eeddf.web.app https://www.googletagmanager.com https://www.google-analytics.com; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://www.googleapis.com https://apis.google.com https://accounts.google.com https://ssl.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com; "
-        "script-src-elem 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com https://apis.google.com https://accounts.google.com https://ssl.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com; "
+        "connect-src 'self' https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://apis.google.com https://the-perfect-world-eeddf.firebaseapp.com https://the-perfect-world-eeddf.web.app https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://*.google-analytics.com; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://www.googleapis.com https://apis.google.com https://accounts.google.com https://ssl.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com; "
+        "script-src-elem 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com https://apis.google.com https://accounts.google.com https://ssl.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com; "
         "script-src-attr 'unsafe-inline'; "
         "frame-src 'self' https://accounts.google.com https://apis.google.com https://oauth.googleusercontent.com https://the-perfect-world-eeddf.firebaseapp.com https://the-perfect-world-eeddf.web.app; "
         "frame-ancestors 'self'; "
@@ -146,3 +174,20 @@ async def favicon():
     if os.path.exists(static_fav):
         return FileResponse(static_fav, media_type='image/x-icon')
     return FileResponse(os.path.join(static_dir, 'icons', 'icon-192.png'), media_type='image/png')
+
+
+@app.get('/_debug/current_user')
+async def debug_current_user(request: Request):
+    if not settings.debug:
+        return RedirectResponse(url='/', status_code=303)
+
+    cu = getattr(request.state, 'current_user', None)
+    return {
+        'session_user_id': request.session.get('user_id'),
+        'has_current_user': cu is not None,
+        'user': {
+            'id': cu.id,
+            'email': cu.email,
+            'username': cu.username
+        } if cu else None
+    }

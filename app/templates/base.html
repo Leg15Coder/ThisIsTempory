@@ -1,7 +1,12 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html class="no-js" lang="ru">
 <head>
     <meta charset="UTF-8">
+    <script>document.documentElement.classList.remove('no-js');</script>
+    <style>
+        dialog[open] { display: none !important; visibility: hidden !important; pointer-events: none !important; }
+    </style>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="description" content="Motify - Превратите свои задачи в эпические квесты с системой редкости и зависимостей">
     <meta name="theme-color" content="#6e45e2">
@@ -73,24 +78,14 @@
     <aside class="sidebar" id="sidebar" aria-label="Главное меню">
         <nav>
             <ul class="menu">
-                {% if current_user %}
+                {% set is_authed = current_user %}
+                {% if is_authed %}
                 <li class="menu-item">
                     <a href="{{ url_for('profile_page') }}" class="menu-link">
                         <span aria-hidden="true">👤</span> Профиль
                     </a>
                 </li>
-                {% else %}
-                <li class="menu-item">
-                    <a href="{{ url_for('login_page') }}" class="menu-link">
-                        <span aria-hidden="true">🔐</span> Вход
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="{{ url_for('register_page') }}" class="menu-link">
-                        <span aria-hidden="true">✨</span> Регистрация
-                    </a>
-                </li>
-                {% endif %}
+
                 <li class="menu-item">
                     <a href="{{ (base_url|default('/quest-app')) }}/create" class="menu-link">
                         <span aria-hidden="true">✏️</span> Создать
@@ -126,6 +121,18 @@
                         <span aria-hidden="true">🔄</span> Периодические
                     </a>
                 </li>
+                {% else %}
+                <li class="menu-item">
+                    <a href="{{ url_for('login_page') }}" class="menu-link">
+                        <span aria-hidden="true">🔐</span> Вход
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <a href="{{ url_for('register_page') }}" class="menu-link">
+                        <span aria-hidden="true">✨</span> Регистрация
+                    </a>
+                </li>
+                {% endif %}
             </ul>
         </nav>
     </aside>

@@ -4,59 +4,16 @@
 <div class="shop-container">
     <div class="shop-header">
         <h1 class="shop-title">Магазин артефактов</h1>
-        <div class="currency-display">
-            💰 Баланс: <span id="currencyValue">{{ current_user.currency if current_user else 0 }}</span>
+        <div class="shop-header-right" style="display:flex; gap:1rem; align-items:center;">
+            <div class="currency-display">
+                💰 Баланс: <span id="currencyValue">{{ current_user.currency if current_user else 0 }}</span>
+            </div>
+            <div class="shop-actions">
+                <button id="openCreateItem" type="button" class="btn-primary" aria-haspopup="dialog" aria-controls="createItemModal" data-debug-open="shop">
+                    <span style="margin-right:0.5rem;">✦</span> Создать
+                </button>
+            </div>
         </div>
-    </div>
-
-    <div class="form-section">
-        <h2>Создать предмет</h2>
-        <form id="createItemForm" class="quest-form">
-            <div class="form-row">
-                <div class="form-group-modern half">
-                    <label class="label-small">Название</label>
-                    <input type="text" name="name" class="input-modern" required>
-                </div>
-                <div class="form-group-modern half">
-                    <label class="label-small">Цена (монеты)</label>
-                    <input type="number" name="price" class="input-modern" min="0" value="0" required>
-                </div>
-            </div>
-            <div class="form-group-modern">
-                <label class="label-small">Описание</label>
-                <textarea name="description" rows="2" class="textarea-modern"></textarea>
-            </div>
-            <div class="form-row">
-                <div class="form-group-modern half">
-                    <label class="label-small">Редкость</label>
-                    <select name="rarity" class="select-modern">
-                        <option value="Обычный">Обычный</option>
-                        <option value="Необычный">Необычный</option>
-                        <option value="Редкий">Редкий</option>
-                        <option value="Эпический">Эпический</option>
-                        <option value="Легендарный">Легендарный</option>
-                    </select>
-                </div>
-                <div class="form-group-modern half">
-                    <label class="label-small">Иконка (эмодзи)</label>
-                    <input type="text" name="icon" class="input-modern" placeholder="✨">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group-modern half">
-                    <label class="label-small">Количество на складе</label>
-                    <input type="number" name="stock" class="input-modern" min="0" placeholder="Пусто = бесконечно">
-                </div>
-                <div class="form-group-modern half">
-                    <label class="toggle-container">
-                        <input type="checkbox" name="is_available" checked>
-                        <span class="toggle-switch"></span>
-                        <span class="label-text">Доступен для покупки</span>
-                    </label>
-                </div>
-            </div>
-            <button type="submit" class="btn-create-quest">Создать предмет</button>
-        </form>
     </div>
 
     <div class="form-section">
@@ -66,6 +23,82 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', path='js/shop.js') }}" defer></script>
-{% endblock %}
+<template id="createItemTemplate">
+    <dialog id="createItemModal" class="shop-dialog managed" aria-labelledby="createItemTitle">
+        <div class="modal-inner">
+            <button class="modal-close" id="modalClose" aria-label="Закрыть">✖</button>
+            <h2 id="createItemTitle">Создать предмет</h2>
+            <form id="createItemForm" class="quest-form">
+                <div class="form-row">
+                    <div class="form-group-modern half">
+                        <label for="item-name" class="label-small">Название</label>
+                        <input id="item-name" type="text" name="name" class="input-modern" required>
+                    </div>
+                    <div class="form-group-modern half">
+                        <label for="item-price" class="label-small">Цена (монеты)</label>
+                        <input id="item-price" type="number" name="price" class="input-modern" min="0" value="0" required>
+                    </div>
+                </div>
+                <div class="form-group-modern">
+                    <label for="item-description" class="label-small">Описание</label>
+                    <textarea id="item-description" name="description" rows="2" class="textarea-modern"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group-modern half">
+                        <label for="item-rarity" class="label-small">Редкость</label>
+                        <select id="item-rarity" name="rarity" class="select-modern">
+                            <option value="Обычный">Обычный</option>
+                            <option value="Необычный">Необычный</option>
+                            <option value="Редкий">Редкий</option>
+                            <option value="Эпический">Эпический</option>
+                            <option value="Легендарный">Легендарный</option>
+                        </select>
+                    </div>
+                    <div class="form-group-modern half">
+                        <label for="item-icon" class="label-small">Иконка (эмодзи)</label>
+                        <input id="item-icon" type="text" name="icon" class="input-modern" placeholder="✨">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group-modern half">
+                        <label for="item-stock" class="label-small">Количество на складе</label>
+                        <input id="item-stock" type="number" name="stock" class="input-modern" min="0" placeholder="Пусто = бесконечно">
+                    </div>
+                    <div class="form-group-modern half">
+                        <label class="label-small" for="item-available">Доступен для покупки</label>
+                        <label class="toggle-container">
+                            <input id="item-available" type="checkbox" name="is_available" checked>
+                            <span class="toggle-switch"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn-create-quest">Создать предмет</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+</template>
 
+<div id="createItemModalContainer" aria-hidden="true"></div>
+
+{% set _t = namespace(v=loop.index if false else None) %}
+<script>
+    const __shopCacheBust = Date.now();
+    (function(){
+        var s1 = document.createElement('script');
+        s1.src = "{{ url_for('static', path='js/shop-init.js') }}?v=" + __shopCacheBust;
+        s1.async = false;
+        document.head.appendChild(s1);
+        var s2 = document.createElement('script');
+        s2.src = "{{ url_for('static', path='js/shop.js') }}?v=" + __shopCacheBust;
+        s2.defer = true;
+        document.head.appendChild(s2);
+        var s3 = document.createElement('script');
+        s3.src = "{{ url_for('static', path='js/shop-fallback.js') }}?v=" + __shopCacheBust;
+        s3.defer = true;
+        document.head.appendChild(s3);
+    })();
+</script>
+
+{% endblock %}

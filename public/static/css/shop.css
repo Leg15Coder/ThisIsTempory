@@ -134,7 +134,49 @@
     filter: none;
 }
 
-/* Rarity Colors */
+.btn-primary {
+    background: linear-gradient(135deg, #6e45e2, #b06ce0);
+    color: #fff;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(110,69,226,0.18);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(110,69,226,0.22); }
+#openCreateItem { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+.shop-dialog {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 94%;
+    max-width: 720px;
+    max-height: 90vh;
+    z-index: 999999;
+}
+
+.shop-dialog[open] { display: flex; }
+
+.shop-dialog .modal-inner {
+    background: #15151b;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.04);
+    color: #fff;
+    max-height: calc(90vh - 40px);
+    overflow: auto;
+}
+
+.modal-close { background: transparent; border: none; color: rgba(255,255,255,0.9); font-size: 1.1rem; cursor: pointer; position: absolute; right: 1rem; top: 1rem; }
+
+.btn-create-quest { background: linear-gradient(135deg, #7b4be6, #b06ce0); color: white; padding: 0.6rem 0.9rem; border-radius: 10px; border: none; cursor: pointer; }
+.btn-secondary { background: transparent; color: rgba(255,255,255,0.9); border: 1px solid rgba(255,255,255,0.06); padding: 0.6rem 0.9rem; border-radius: 10px; cursor: pointer; }
+
 .rarity-common .item-rarity-badge { color: #b0b0b0; border: 1px solid #b0b0b0; }
 .rarity-uncommon .item-rarity-badge { color: #1eff00; border: 1px solid #1eff00; }
 .rarity-rare .item-rarity-badge { color: #0070dd; border: 1px solid #0070dd; }
@@ -248,4 +290,54 @@ input[type="checkbox"]:checked + .toggle-switch {
 
 input[type="checkbox"]:checked + .toggle-switch::after {
     transform: translateX(20px);
+}
+
+/* Shop overlay (created dynamically by shop-init.js) */
+#shopModalOverlay_v1 {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(0,0,0,0.6) !important;
+    z-index: 1200000 !important;
+    backdrop-filter: blur(3px) !important;
+}
+
+/* Inner container inside overlay (cloned from template) */
+#shopModalOverlay_v1 .modal-inner,
+#shopModalOverlay_v1 .shop-dialog-inner {
+    background: #15151b !important;
+    padding: 1.25rem !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    color: #fff !important;
+    max-height: calc(90vh - 40px) !important;
+    overflow: auto !important;
+    width: 94% !important;
+    max-width: 720px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6) !important;
+    position: relative !important;
+}
+
+#shopModalOverlay_v1 .modal-inner .modal-close,
+#shopModalOverlay_v1 .shop-dialog-inner .modal-close {
+    position: absolute !important;
+    right: 12px !important;
+    top: 12px !important;
+    background: transparent !important;
+    border: none !important;
+    color: rgba(255,255,255,0.9) !important;
+    font-size: 1.1rem !important;
+    cursor: pointer !important;
+}
+
+/* Ensure buttons inside modal look consistent */
+#shopModalOverlay_v1 .btn-create-quest { background: linear-gradient(135deg, #7b4be6, #b06ce0) !important; color: white !important; }
+#shopModalOverlay_v1 .btn-secondary { background: transparent !important; color: rgba(255,255,255,0.9) !important; }
+
+/* Make sure overlay inner contents are responsive */
+@media (max-width: 700px) {
+    #shopModalOverlay_v1 .modal-inner,
+    #shopModalOverlay_v1 .shop-dialog-inner { width: calc(100% - 32px) !important; margin: 0 16px !important; }
 }

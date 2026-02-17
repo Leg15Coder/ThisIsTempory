@@ -10,26 +10,54 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+USE_FIRESTORE = os.environ.get('FIRESTORE_ENABLED', '0') in ('1', 'true', 'True')
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./quests.db"
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
-    pool_pre_ping=True,  # Проверка соединения перед использованием
-    echo=False  # Отключаем логирование SQL запросов в production
-)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+if USE_FIRESTORE:
+    print('ℹ️ FIRESTORE_ENABLED detected in environment — пропускаем инициализацию SQLAlchemy (используется Firestore в проде)')
+    engine = None
+    SessionLocal = None
+
+else:
+    if not DATABASE_URL:
+        DATABASE_URL = "sqlite:///./quests.db"
+
+    _engine = None
+    try:
+        _connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+        _engine = create_engine(
+            DATABASE_URL,
+            connect_args=_connect_args,
+            pool_pre_ping=True,
+            echo=False
+        )
+    except Exception as e:
+        print('⚠️ Ошибка при создании engine с DATABASE_URL=', DATABASE_URL, ' — ', e)
+        if 'sqlite' in (DATABASE_URL or ''):
+            print('⚠️ Переходим на in-memory SQLite в качестве fallback')
+            _engine = create_engine(
+                'sqlite:///:memory:',
+                connect_args={"check_same_thread": False},
+                pool_pre_ping=True,
+                echo=False
+            )
+        else:
+            raise
+
+    engine = _engine
+
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def get_db():
+    if USE_FIRESTORE:
+        yield None
+        return
     db = SessionLocal()
     try:
         yield db

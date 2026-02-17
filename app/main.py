@@ -90,27 +90,47 @@ app.add_middleware(CurrentUserMiddleware)
 
 
 project_root = Path(__file__).resolve().parent.parent
-public_static = project_root / 'public' / 'static'
-if public_static.exists():
-    static_dir = str(public_static.resolve())
-    print(f"ℹ️ Using public static directory: {static_dir}")
-else:
-    static_dir = settings.static_path if hasattr(settings, 'static_path') else settings.static_dir
-    static_dir_path = Path(static_dir)
-    if not static_dir_path.is_absolute():
-        static_dir_path = (project_root / static_dir).resolve()
-    if static_dir_path.exists():
-        static_dir = str(static_dir_path)
-        print(f"ℹ️ Using settings static directory: {static_dir}")
-    else:
-        fallback = str(Path(__file__).resolve().parent / "static")
-        print(f"⚠️ Указанная директория static не найдена: {static_dir_path}. Попытка использовать fallback: {fallback}")
-        if Path(fallback).exists():
-            static_dir = fallback
-        else:
-            print(f"❌ Ни public, ни settings, ни fallback static путь не найдены. static_dir={static_dir}, fallback={fallback}")
 
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+candidates = [
+    project_root / 'public' / 'static',
+    project_root / 'static',
+    project_root / 'app' / 'static',
+    project_root / 'public',
+]
+
+try:
+    s_path = settings.static_path if hasattr(settings, 'static_path') else None
+    if s_path:
+        candidates.append(Path(s_path))
+except Exception:
+    pass
+
+candidates.append(Path(__file__).resolve().parent / 'static')
+
+static_dir = None
+for p in candidates:
+    try:
+        if p and p.exists():
+            static_dir = str(p.resolve())
+            print(f"ℹ️ Using static directory: {static_dir}")
+            break
+    except Exception:
+        continue
+
+if static_dir is None:
+    import tempfile
+    temp_static = Path(tempfile.mkdtemp(prefix='motify-static-'))
+    print(f"⚠️ Не найден ни один статический каталог; создан временный пустой каталог: {temp_static}")
+    static_dir = str(temp_static)
+
+try:
+    app.mount('/static', StaticFiles(directory=static_dir), name='static')
+except Exception as e:
+    print(f"⚠️ Ошибка при монтировании статических файлов {static_dir}: {e}")
+    import tempfile
+    fallback_dir = Path(tempfile.mkdtemp(prefix='motify-static-fallback-'))
+    print(f"⚠️ Монтируется fallback static: {fallback_dir}")
+    app.mount('/static', StaticFiles(directory=str(fallback_dir)), name='static')
 
 app.include_router(auth_router)
 app.include_router(profile_router)
@@ -119,7 +139,11 @@ app.include_router(tasks_router)
 
 @app.get("/sw.js", include_in_schema=False)
 async def service_worker():
-    return FileResponse(os.path.join(static_dir, "sw.js"), media_type="application/javascript")
+    sw_path = os.path.join(static_dir, "sw.js")
+    if os.path.exists(sw_path):
+        return FileResponse(sw_path, media_type="application/javascript")
+    from fastapi.responses import Response
+    return Response("// no service worker available", media_type="application/javascript", status_code=200)
 
 @app.get("/", response_class=HTMLResponse)
 async def main_landing(request: Request):

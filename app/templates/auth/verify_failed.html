@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="centered-panel">
+  <h2>Ошибка подтверждения</h2>
+  <p>{{ message }}</p>
+  <p><a href="{{ url_for('register_page') }}">Зарегистрироваться</a> или <a href="{{ url_for('login_page') }}">Войти</a></p>
+</div>
+{% endblock %}

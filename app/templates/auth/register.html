@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1 class="auth-title">Регистрация</h1>
+            <p class="auth-subtitle">Создайте аккаунт и начните свои квесты</p>
+        </div>
+
+        <form id="registerForm" class="auth-form">
+            <div class="form-group">
+                <label for="email" class="label-small">Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="input-modern"
+                    placeholder="your@email.com"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="username" class="label-small">Имя пользователя (опционально)</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="input-modern"
+                    placeholder="username"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="label-small">Пароль (минимум 8 символов)</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="input-modern"
+                    placeholder="••••••••"
+                    required
+                    minlength="8"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword" class="label-small">Подтвердите пароль</label>
+                <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    class="input-modern"
+                    placeholder="••••••••"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn-primary btn-full">
+                <span class="icon">✨</span>
+                Зарегистрироваться
+            </button>
+        </form>
+
+        {% if firebase_enabled %}
+        <div class="auth-divider">
+            <span>или</span>
+        </div>
+
+        <button id="googleSignupBtn" class="btn-google">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="20" height="20">
+            Войти через Google
+        </button>
+        {% endif %}
+
+        <div class="auth-footer">
+            <p>Уже есть аккаунт? <a href="{{ url_for('login_page') }}" class="auth-link">Войти</a></p>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+    </div>
+</div>
+
+<style>
+.auth-container {
+    min-height: calc(100vh - 8rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+
+.auth-card {
+    max-width: 420px;
+    width: 100%;
+    background: rgba(30, 40, 50, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--epic));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--epic));
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(110, 69, 226, 0.3);
+}
+
+.btn-full {
+    width: 100%;
+}
+
+.auth-divider {
+    position: relative;
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.auth-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-divider span {
+    position: relative;
+    background: rgba(30, 40, 50, 0.6);
+    padding: 0 1rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.btn-google {
+    width: 100%;
+    background: white;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 1rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.btn-google:hover {
+    background: #f8f8f8;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.auth-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 0, 0, 0.1);
+    border: 1px solid rgba(255, 0, 0, 0.3);
+    border-radius: 8px;
+    color: #ff6b6b;
+    font-size: 0.9rem;
+}
+</style>
+
+<script type="module">
+import { auth, googleProvider, signInWithPopup } from "{{ url_for('static', path='js/firebase-config.js') }}";
+
+function getNextRedirect() {
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next');
+    return next || '{{ base_url|default('/quest-app') }}';
+}
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (password !== confirmPassword) {
+        showError('Пароли не совпадают');
+        return;
+    }
+
+    const formData = {
+        email: document.getElementById('email').value,
+        username: document.getElementById('username').value || null,
+        password: password
+    };
+
+    try {
+        const response = await fetch('/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            const redirectTo = getNextRedirect();
+            window.location.href = redirectTo;
+        } else {
+            const error = await response.json();
+            showError(error.detail || 'Ошибка регистрации');
+        }
+    } catch (error) {
+        showError('Ошибка соединения с сервером');
+    }
+});
+
+function showError(message) {
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+// Google Sign-In
+{% if firebase_enabled %}
+const googleSignup = document.getElementById('googleSignupBtn');
+if (googleSignup) {
+    googleSignup.addEventListener('click', async () => {
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            const idToken = await result.user.getIdToken();
+
+            const response = await fetch('/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_token: idToken })
+            });
+
+            if (response.ok) {
+                const redirectTo = getNextRedirect();
+                window.location.href = redirectTo;
+            } else {
+                const err = await response.json();
+                showError(err.detail || 'Ошибка Google аутентификации');
+            }
+        } catch (err) {
+            console.error('Google sign up error:', err);
+            if (err && err.code === 'auth/unauthorized-domain') {
+                const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+                showError('Ошибка Google Sign-In: домен приложения не добавлен в разрешённые домены Firebase. Добавьте ' + origin + ' в список Authorized domains в Firebase Console.');
+            } else {
+                showError('Ошибка входа через Google');
+            }
+        }
+    });
+}
+{% endif %}
+</script>
+
+{% endblock %}

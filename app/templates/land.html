@@ -1,10 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motify</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/land.css') }}">
 </head>
 <body>
-<h1>HELLO, WORLD!</h1>
+    <div class="gradient-bg">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+
+    <div class="landing-container">
+        <h1 class="logo">The Last Reality</h1>
+        <p class="tagline">Превратите свои задачи в эпические квесты</p>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">⚔️</div>
+                <div class="feature-title">Квесты с редкостью</div>
+                <div class="feature-desc">От обычных до легендарных заданий</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔗</div>
+                <div class="feature-title">Зависимости</div>
+                <div class="feature-desc">Создавайте цепочки связанных квестов</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Прогресс</div>
+                <div class="feature-desc">Отслеживайте выполнение с подзадачами</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">💎</div>
+                <div class="feature-title">Награды</div>
+                <div class="feature-desc">Получайте очки за завершение</div>
+            </div>
+        </div>
+
+        <a href="{{ url_for('read_quests') }}" class="cta-button">
+            <span>✨ Начать приключение</span>
+        </a>
+
+        <div class="footer-text">
+            <p>© 2026 Motify</p>
+            <p><a href="https://t.me/dimka_ryaz" target="_blank">Связаться с разработчиком</a></p>
+        </div>
+    </div>
 </body>
 </html>
+

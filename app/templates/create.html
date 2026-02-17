@@ -1,71 +1,303 @@
 {% extends "base.html" %}
 {% block content %}
-<script src="{{ url_for('static', path='/js/create.js') }}" defer></script>
-<h2 class="modal-title">Создать новый квест</h2>
+<script src="{{ url_for('static', path='js/create.js') }}" defer></script>
 
-<form action="/create" method="post" class="form" id="questForm" enctype="multipart/form-data">
-    <div class="form-group">
-        <label for="questTitle">Название:</label>
-        <input type="text" id="questTitle" maxlength="64" required class="pixel-input" name="title">
-        <div class="char-counter"><span id="titleCounter">0</span>/64</div>
+<div class="create-container">
+    <div class="create-header">
+        <h1 class="create-title">Создать новый квест</h1>
+        <p class="create-subtitle">Заполните детали вашего эпического задания</p>
     </div>
 
-    <div class="form-group">
-        <label for="questAuthor">Автор:</label>
-        <input type="text" id="questAuthor" maxlength="64" class="pixel-input" name="author">
-        <div class="char-counter"><span id="authorCounter">0</span>/64</div>
-    </div>
+    <form action="{{ base_url }}/create" method="post" class="quest-form" id="questForm" enctype="multipart/form-data">
 
-    <div class="form-group">
-        <label for="questDescription">Описание:</label>
-        <textarea id="questDescription" rows="4" required class="pixel-textarea" name="description"></textarea>
-    </div>
-
-    <div class="form-group">
-        <label for="questDeadlineDate">Дедлайн:</label>
-        <div class="datetime-inputs">
-            <input type="date" id="questDeadlineDate" class="pixel-input" name="deadline_date">
-            <input type="time" id="questDeadlineTime" class="pixel-input" name="deadline_time">
+        <!-- Hero: Название квеста -->
+        <div class="form-section hero-section">
+            <div class="glow-border">
+                <div class="form-group-modern">
+                    <label for="questTitle" class="label-small">Название квеста</label>
+                    <input
+                        type="text"
+                        id="questTitle"
+                        maxlength="200"
+                        required
+                        class="input-hero"
+                        name="title"
+                        placeholder="Введите название эпического квеста..."
+                    >
+                    <div class="char-counter"><span id="titleCounter">0</span>/200</div>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="form-group">
-        <label for="questCost">Награда:</label>
-        <input type="number" value="0" min="0" id="questCost" class="pixel-input" name="cost">
-    </div>
+        <!-- Награда и Редкость -->
+        <div class="form-row">
+            <div class="form-section half">
+                <div class="form-group-modern">
+                    <label for="questCost" class="label-small">
+                        <span class="icon">💰</span> Награда
+                    </label>
+                    <div class="input-with-suffix">
+                        <input
+                            type="number"
+                            value="100"
+                            min="0"
+                            id="questCost"
+                            class="input-modern"
+                            name="cost"
+                        >
+                        <span class="input-suffix">GP</span>
+                    </div>
+                </div>
+            </div>
 
-    <div class="form-group">
-        <label for="questType">Тип квеста:</label>
-        <select id="questType" class="pixel-select" name="rarity">
-            <option>Обычный</option>
-            <option>Необычный</option>
-            <option>Редкий</option>
-            <option>Эпический</option>
-            <option>Легендарный</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label for="parentQuests">Родительские квесты (необязательно):</label>
-        <select id="parentQuests" class="pixel-select" name="parent_quests" multiple>
-            {% for available_quest in available_quests %}
-            <option value="{{ available_quest.id }}">{{ available_quest.title }}
-                ({{ available_quest.rarity.value }}, {{ available_quest.status.value }})
-            </option>
-            {% endfor %}
-        </select>
-        <div class="hint">Удерживайте Ctrl для выбора нескольких квестов</div>
-    </div>
-
-    <div class="checkboxes-container">
-        <label>Подзадачи:</label>
-        <div id="subtasksList"></div>
-        <div class="add-subtask-buttons">
-            <button type="button" id="addCheckbox" class="add-subtask">Добавить чекбокс</button>
-            <button type="button" id="addNumeric" class="add-subtask">Добавить числовую цель</button>
+            <div class="form-section half">
+                <div class="form-group-modern">
+                    <label for="questType" class="label-small">Редкость</label>
+                    <div class="select-wrapper">
+                        <select id="questType" class="select-modern" name="rarity">
+                            <option value="common">Обычный</option>
+                            <option value="uncommon">Необычный</option>
+                            <option value="rare">Редкий</option>
+                            <option value="epic" selected>Эпический</option>
+                            <option value="legendary">Легендарный</option>
+                        </select>
+                        <span class="select-icon">▼</span>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <button type="submit" class="pixel-button">Создать квест</button>
-</form>
+        <!-- Дополнительные детали (Accordion) -->
+        <details class="form-accordion" open>
+            <summary class="accordion-header">
+                <span class="accordion-title">
+                    <span class="icon">📜</span> Дополнительные детали
+                </span>
+                <span class="accordion-arrow">▼</span>
+            </summary>
+            <div class="accordion-content">
+                <div class="form-group-modern">
+                    <label for="questDescription" class="label-small">Описание / История</label>
+                    <textarea
+                        id="questDescription"
+                        rows="4"
+                        class="textarea-modern"
+                        name="description"
+                        placeholder="Опишите предстоящее путешествие..."
+                    ></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group-modern half">
+                        <label for="questAuthor" class="label-small">Автор</label>
+                        <input
+                            type="text"
+                            id="questAuthor"
+                            maxlength="100"
+                            class="input-modern"
+                            name="author"
+                            placeholder="Мастер гильдии"
+                            value="???"
+                        >
+                    </div>
+
+                    <div class="form-group-modern half">
+                        <label for="questDeadlineDate" class="label-small">Дедлайн</label>
+                        <div class="datetime-group">
+                            <input
+                                type="date"
+                                id="questDeadlineDate"
+                                class="input-modern date-input"
+                                name="deadline_date"
+                            >
+                            <input
+                                type="time"
+                                id="questDeadlineTime"
+                                class="input-modern time-input"
+                                name="deadline_time"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Зависимости (Accordion) -->
+        <details class="form-accordion">
+            <summary class="accordion-header">
+                <span class="accordion-title">
+                    <span class="icon">🔗</span> Зависимости
+                </span>
+                <span class="accordion-arrow">▼</span>
+            </summary>
+            <div class="accordion-content">
+                <div class="form-group-modern">
+                    <label for="parentQuests" class="label-small">Родительские квесты</label>
+                    <div class="multiselect-wrapper">
+                        <input
+                            type="text"
+                            id="parentQuestsSearch"
+                            class="input-modern search-input"
+                            placeholder="🔍 Поиск квестов по ID или названию..."
+                            aria-label="Поиск родительских квестов"
+                        >
+                        <select
+                            id="parentQuests"
+                            class="select-modern multiselect"
+                            name="parent_quests"
+                            multiple
+                            size="5"
+                        >
+                            {% for available_quest in available_quests %}
+                            <option value="{{ available_quest.id }}" title="{{ available_quest.description }}">
+                                #{{ available_quest.id }} - {{ available_quest.title }} ({{ available_quest.rarity.value }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="help-text">Удерживайте Ctrl (Windows) или Cmd (Mac) для выбора нескольких вариантов</div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Периодичность (Accordion) -->
+        <details class="form-accordion">
+            <summary class="accordion-header">
+                <span class="accordion-title">
+                    <span class="icon">🔄</span> Периодичность
+                </span>
+                <span class="accordion-arrow">▼</span>
+            </summary>
+            <div class="accordion-content">
+                <div class="form-group-modern">
+                    <label class="toggle-container">
+                        <input type="checkbox" id="isRecurrence" name="is_recurrence">
+                        <span class="toggle-switch"></span>
+                        <span class="label-text">Создать шаблон периодического квеста</span>
+                    </label>
+                </div>
+
+                <div id="recurrenceOptions" style="display: none; margin-top: 1rem;">
+                    <div class="form-row">
+                        <div class="form-group-modern half">
+                            <label for="recurrenceType" class="label-small">Тип повторения</label>
+                            <select id="recurrenceType" class="select-modern" name="recurrence_type">
+                                <option value="daily">🗓️ Ежедневно</option>
+                                <option value="weekly">📅 По дням недели</option>
+                                <option value="interval">⏱️ Через интервал</option>
+                            </select>
+                        </div>
+                        <div class="form-group-modern half">
+                            <label for="questDuration" class="label-small">Длительность (часы)</label>
+                            <input
+                                type="number"
+                                id="questDuration"
+                                name="duration_hours"
+                                class="input-modern"
+                                min="1"
+                                value="24"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group-modern half">
+                            <label for="recurrenceStartDate" class="label-small">Дата первого запуска</label>
+                            <input
+                                type="date"
+                                id="recurrenceStartDate"
+                                name="start_date"
+                                class="input-modern"
+                            >
+                        </div>
+                        <div class="form-group-modern half">
+                            <label for="recurrenceStartTime" class="label-small">Время запуска</label>
+                            <input
+                                type="time"
+                                id="recurrenceStartTime"
+                                name="start_time"
+                                class="input-modern"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Опции для weekly -->
+                    <div id="weeklyOptions" class="form-group-modern" style="display: none;">
+                        <label class="label-small">Дни недели</label>
+                        <div class="weekdays-selector">
+                            <label><input type="checkbox" name="weekdays" value="0"> <span>Пн</span></label>
+                            <label><input type="checkbox" name="weekdays" value="1"> <span>Вт</span></label>
+                            <label><input type="checkbox" name="weekdays" value="2"> <span>Ср</span></label>
+                            <label><input type="checkbox" name="weekdays" value="3"> <span>Чт</span></label>
+                            <label><input type="checkbox" name="weekdays" value="4"> <span>Пт</span></label>
+                            <label><input type="checkbox" name="weekdays" value="5"> <span>Сб</span></label>
+                            <label><input type="checkbox" name="weekdays" value="6"> <span>Вс</span></label>
+                        </div>
+                    </div>
+
+                    <!-- Опции для interval -->
+                    <div id="intervalOptions" class="form-group-modern" style="display: none;">
+                        <label for="intervalHours" class="label-small">Интервал повторения (часы)</label>
+                        <input
+                            type="number"
+                            id="intervalHours"
+                            name="interval_hours"
+                            class="input-modern"
+                            min="1"
+                            placeholder="Например: 12"
+                        >
+                    </div>
+
+                    <!-- Окончание повтора -->
+                    <div id="recurrenceEnd" class="form-row" style="margin-top:0.8rem; display:none;">
+                        <div class="form-group-modern half">
+                            <label for="recurrenceEndDate" class="label-small">Повторять до даты</label>
+                            <input type="date" id="recurrenceEndDate" name="end_date" class="input-modern">
+                        </div>
+                        <div class="form-group-modern half">
+                            <label for="recurrenceEndTime" class="label-small">Время окончания (опционально)</label>
+                            <input type="time" id="recurrenceEndTime" name="end_time" class="input-modern">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Подзадачи -->
+        <div class="form-section">
+            <div class="objectives-header">
+                <h3 class="objectives-title">
+                    <span class="icon">✓</span> Подзадачи
+                </h3>
+                <div class="objectives-buttons">
+                    <button type="button" id="addCheckbox" class="btn-add-objective" title="Добавить чекбокс">
+                        <span class="icon">☑</span>
+                        <span class="btn-text">Чекбокс</span>
+                    </button>
+                    <button type="button" id="addNumeric" class="btn-add-objective" title="Добавить числовую цель">
+                        <span class="icon">🔢</span>
+                        <span class="btn-text">Числовая</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="subtasksList" class="subtasks-list"></div>
+
+            <div class="empty-objectives" id="emptyObjectives">
+                <span class="icon">📋</span>
+                <p>Подзадачи не добавлены</p>
+                <p class="hint">Добавьте чекбоксы или числовые цели для отслеживания прогресса</p>
+            </div>
+        </div>
+
+        <!-- Кнопка создания -->
+        <div class="form-footer">
+            <button type="submit" class="btn-create-quest">
+                <span class="icon">✨</span>
+                Создать квест
+            </button>
+        </div>
+    </form>
+</div>
+
 {% endblock %}

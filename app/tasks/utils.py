@@ -1,34 +1,30 @@
-from functools import wraps
-from app.tasks.database import SessionLocal
+from typing import Optional
 
 
-def rarity_class(rarity: str) -> str:
-    mapping = {
-        "обычный": "common",
-        "необычный": "uncommon",
-        "редкий": "rare",
-        "эпический": "epic",
-        "легендарный": "legendary",
-        "выполняется": "active",
-        "проваленный": "failed",
-        "завершённый": "finished"
-    }
-    return mapping.get(rarity.lower())
+RARITY_STATUS_MAPPING = {
+    "обычный": "common",
+    "необычный": "uncommon",
+    "редкий": "rare",
+    "эпический": "epic",
+    "легендарный": "legendary",
+    "выполняется": "active",
+    "проваленный": "failed",
+    "завершённый": "finished",
+    "неактивный": "inactive",
+    "абстрактный": "abstract"
+}
 
 
-def Sessional(func):
-    @wraps(func)
-    async def async_wrapper(*args, **kwargs):
-        db = SessionLocal()
-        try:
-            kwargs["db"] = db
-            result = await func(*args, **kwargs)
-            db.commit()
-            return result
-        except Exception as e:
-            db.rollback()
-            raise e
-        finally:
-            db.close()
+def rarity_class(rarity: str) -> Optional[str]:
+    """
+    Преобразует название редкости/статуса квеста в CSS-класс.
 
-    return async_wrapper
+    Args:
+        rarity: Название редкости или статуса квеста
+
+    Returns:
+        CSS-класс или None если значение не найдено
+    """
+    if not rarity:
+        return None
+    return RARITY_STATUS_MAPPING.get(rarity.lower())

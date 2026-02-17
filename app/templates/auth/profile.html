@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="profile-container">
+    <div class="profile-header">
+        <h1 class="profile-title">Профиль пользователя</h1>
+    </div>
+
+    <div class="profile-content">
+        <!-- Аватар и основная информация -->
+        <div class="profile-card">
+            <div class="avatar-section">
+                {% set avatar = user.avatar_url %}
+                {% if avatar %}
+                    {% if avatar.startswith('http') %}
+                        {% set avatar_src = avatar %}
+                    {% else %}
+                        {% set avatar_src = url_for('static', path=avatar) %}
+                    {% endif %}
+                {% else %}
+                    {% set avatar_src = 'https://ui-avatars.com/api/?name=' + (user.display_name or user.email) + '&background=6e45e2&color=fff&size=200' %}
+                {% endif %}
+                <img
+                    src="{{ avatar_src }}"
+                    alt="Avatar"
+                    class="profile-avatar"
+                    id="avatarImage"
+                    onerror="this.onerror=null;this.src='{{ url_for('static', path='img/logo.png') }}';"
+                >
+                <button class="btn-secondary btn-small" onclick="document.getElementById('avatarInput').click()">
+                    Изменить фото
+                </button>
+                <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+            </div>
+
+            <div class="profile-info">
+                <h2 id="displayNameText">{{ user.display_name }}</h2>
+                <p class="profile-email">{{ user.email }}</p>
+                {% if user.username %}
+                <p class="profile-username">@{{ user.username }}</p>
+                {% endif %}
+                {% if user.is_verified %}
+                <span class="verified-badge">✓ Подтверждён</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Редактирование профиля -->
+        <div class="profile-card">
+            <h3 class="card-title">Редактировать профиль</h3>
+            <form id="profileForm" class="profile-form">
+                <div class="form-group">
+                    <label for="displayName" class="label-small">Отображаемое имя</label>
+                    <input
+                        type="text"
+                        id="displayName"
+                        class="input-modern"
+                        value="{{ user.display_name }}"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="username" class="label-small">Имя пользователя</label>
+                    <input
+                        type="text"
+                        id="username"
+                        class="input-modern"
+                        value="{{ user.username or '' }}"
+                        placeholder="username"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="bio" class="label-small">О себе</label>
+                    <textarea
+                        id="bio"
+                        class="textarea-modern"
+                        rows="3"
+                        placeholder="Расскажите о себе..."
+                    >{{ user.bio or '' }}</textarea>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    Сохранить изменения
+                </button>
+            </form>
+        </div>
+
+        <!-- Настройки -->
+        <div class="profile-card">
+            <h3 class="card-title">Настройки</h3>
+            <form id="settingsForm" class="profile-form">
+                <div class="form-group">
+                    <label for="theme" class="label-small">Тема</label>
+                    <select id="theme" class="select-modern">
+                        <option value="dark" {{ 'selected' if user.theme == 'dark' else '' }}>Тёмная</option>
+                        <option value="light" {{ 'selected' if user.theme == 'light' else '' }}>Светлая</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="language" class="label-small">Язык</label>
+                    <select id="language" class="select-modern">
+                        <option value="ru" {{ 'selected' if user.language == 'ru' else '' }}>Русский</option>
+                        <option value="en" {{ 'selected' if user.language == 'en' else '' }}>English</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="custom-checkbox">
+                        <input
+                            type="checkbox"
+                            id="notifications"
+                            {{ 'checked' if user.notifications_enabled else '' }}
+                        >
+                        Включить уведомления
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    Сохранить настройки
+                </button>
+            </form>
+        </div>
+
+        <!-- Смена пароля (только для email аккаунтов) -->
+        {% if user.google_id is none %}
+        <div class="profile-card">
+            <h3 class="card-title">Смена пароля</h3>
+            <form id="passwordForm" class="profile-form">
+                <div class="form-group">
+                    <label for="currentPassword" class="label-small">Текущий пароль</label>
+                    <input
+                        type="password"
+                        id="currentPassword"
+                        class="input-modern"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="newPassword" class="label-small">Новый пароль</label>
+                    <input
+                        type="password"
+                        id="newPassword"
+                        class="input-modern"
+                        required
+                        minlength="8"
+                    >
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    Изменить пароль
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="profile-card">
+            <button id="logoutBtn" class="btn-secondary btn-full">
+                Выйти из аккаунта
+            </button>
+        </div>
+    </div>
+
+    <div id="successMessage" class="success-message" style="display: none;"></div>
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+</div>
+
+<style>
+.profile-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.profile-header {
+    margin-bottom: 2rem;
+}
+
+.profile-title {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--epic));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.profile-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.profile-card {
+    background: rgba(30, 40, 50, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.avatar-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    object-fit: cover;
+}
+
+/* Primary button style for profile actions */
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--epic));
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(110,69,226,0.2);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(110,69,226,0.28);
+}
+
+/* Full width secondary/primary */
+.btn-full {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+}
+
+/* Ensure secondary has consistent look */
+.btn-secondary {
+    background: rgba(110, 69, 226, 0.12);
+    border: 1px solid rgba(110,69,226,0.25);
+    color: var(--accent);
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.12s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(110, 69, 226, 0.22);
+}
+
+.profile-info {
+    text-align: center;
+}
+
+.profile-info h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.profile-email {
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.profile-username {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.verified-badge {
+    display: inline-block;
+    background: rgba(110, 69, 226, 0.2);
+    color: var(--accent);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+    color: var(--accent);
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.success-message {
+    position: fixed;
+    top: 6rem;
+    right: 1rem;
+    padding: 1rem 1.5rem;
+    background: rgba(76, 175, 80, 0.2);
+    border: 1px solid rgba(76, 175, 80, 0.5);
+    border-radius: 10px;
+    color: #4caf50;
+    z-index: 1000;
+}
+
+@media (max-width: 768px) {
+    .profile-container {
+        padding: 1rem 0.5rem;
+    }
+}
+</style>
+
+<script>
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = {
+        display_name: document.getElementById('displayName').value,
+        username: document.getElementById('username').value || null,
+        bio: document.getElementById('bio').value || null
+    };
+
+    try {
+        const response = await fetch('/profile/api', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            showSuccess('Профиль обновлён');
+            const result = await response.json();
+            document.getElementById('displayNameText').textContent = result.display_name;
+        } else {
+            const error = await response.json();
+            showError(error.detail);
+        }
+    } catch (error) {
+        showError('Ошибка соединения');
+    }
+});
+
+document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = {
+        theme: document.getElementById('theme').value,
+        language: document.getElementById('language').value,
+        notifications_enabled: document.getElementById('notifications').checked
+    };
+
+    try {
+        const response = await fetch('/profile/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            showSuccess('Настройки сохранены');
+        } else {
+            showError('Ошибка сохранения настроек');
+        }
+    } catch (error) {
+        showError('Ошибка соединения');
+    }
+});
+
+const passwordForm = document.getElementById('passwordForm');
+if (passwordForm) {
+    passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const data = {
+            current_password: document.getElementById('currentPassword').value,
+            new_password: document.getElementById('newPassword').value
+        };
+
+        try {
+            const response = await fetch('/profile/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                showSuccess('Пароль изменён');
+                passwordForm.reset();
+            } else {
+                const error = await response.json();
+                showError(error.detail);
+            }
+        } catch (error) {
+            showError('Ошибка соединения');
+        }
+    });
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try {
+        await fetch('/auth/logout', { method: 'POST' });
+        window.location.href = '{{ url_for('login_page') }}';
+    } catch (error) {
+        showError('Ошибка выхода');
+    }
+});
+
+function showSuccess(message) {
+    const div = document.getElementById('successMessage');
+    div.textContent = message;
+    div.style.display = 'block';
+    setTimeout(() => { div.style.display = 'none'; }, 3000);
+}
+
+function showError(message) {
+    const div = document.getElementById('errorMessage');
+    div.textContent = message;
+    div.style.display = 'block';
+    setTimeout(() => { div.style.display = 'none'; }, 3000);
+}
+</script>
+
+{% endblock %}

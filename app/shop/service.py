@@ -10,13 +10,32 @@ from app.shop.schemas import (
     ShopItemCreate, ShopItemUpdate,
     QuestTemplateCreate, QuestTemplateUpdate
 )
-
+from app.tasks.firestore_service import (
+    list_shop_items as fs_list_shop_items,
+    create_shop_item as fs_create_shop_item,
+    get_shop_item as fs_get_shop_item,
+    update_shop_item as fs_update_shop_item,
+    list_inventory as fs_list_inventory,
+    create_inventory_entry as fs_create_inventory_entry,
+    update_inventory_entry as fs_update_inventory_entry,
+    list_templates as fs_list_templates,
+    create_template as fs_create_template,
+    get_template as fs_get_template,
+    update_template as fs_update_template,
+    delete_template as fs_delete_template,
+    create_quest as fs_create_quest
+)
 
 class ShopService:
     """Сервис для работы с магазином"""
 
     @staticmethod
     def create_item(db: Session, user_id: int, item_data: ShopItemCreate) -> ShopItem:
+        if db is None:
+            # Firestore mode
+            item = fs_create_shop_item(user_id, item_data.model_dump())
+            return item
+
         item = ShopItem(
             user_id=user_id,
             name=item_data.name,
@@ -34,6 +53,8 @@ class ShopService:
 
     @staticmethod
     def get_items(db: Session, user_id: int, available_only: bool = True) -> List[ShopItem]:
+        if db is None:
+            return fs_list_shop_items(user_id, available_only=available_only)
         query = db.query(ShopItem).filter(ShopItem.user_id == user_id)
         if available_only:
             query = query.filter(ShopItem.is_available == True)
@@ -41,12 +62,22 @@ class ShopService:
 
     @staticmethod
     def get_item(db: Session, item_id: int, user_id: int) -> Optional[ShopItem]:
+        if db is None:
+            return fs_get_shop_item(user_id, item_id)
         return db.query(ShopItem).filter(
             and_(ShopItem.id == item_id, ShopItem.user_id == user_id)
         ).first()
 
     @staticmethod
     def update_item(db: Session, item_id: int, user_id: int, update_data: ShopItemUpdate) -> ShopItem:
+        if db is None:
+            # Firestore mode
+            update_dict = update_data.model_dump(exclude_unset=True)
+            updated = fs_update_shop_item(item_id, update_dict)
+            if not updated:
+                raise HTTPException(status_code=404, detail="Предмет не найден")
+            return updated
+
         item = ShopService.get_item(db, item_id, user_id)
         if not item:
             raise HTTPException(status_code=404, detail="Предмет не найден")
@@ -61,6 +92,11 @@ class ShopService:
 
     @staticmethod
     def delete_item(db: Session, item_id: int, user_id: int) -> bool:
+        if db is None:
+            # Firestore mode
+            ok = fs_update_shop_item(item_id, {'is_available': False})  # soft-delete
+            return True if ok else False
+
         item = ShopService.get_item(db, item_id, user_id)
         if not item:
             raise HTTPException(status_code=404, detail="Предмет не найден")
@@ -74,10 +110,29 @@ class InventoryService:
 
     @staticmethod
     def get_inventory(db: Session, user_id: int) -> List[Inventory]:
+        if db is None:
+            return fs_list_inventory(user_id)
         return db.query(Inventory).filter(Inventory.user_id == user_id).all()
 
     @staticmethod
     def purchase_item(db: Session, user_id: int, shop_item_id: int, quantity: int = 1) -> Inventory:
+        if db is None:
+            # Firestore mode: use transactional purchase implementation
+            from app.tasks.firestore_service import get_shop_item as fs_get_shop_item, purchase_shop_item
+            shop_item = fs_get_shop_item(user_id, shop_item_id)
+            if not shop_item:
+                raise HTTPException(status_code=404, detail="Предмет не найден")
+            try:
+                updated_user = purchase_shop_item(user_id, shop_item_id, quantity)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            # Return minimal inventory info: list_inventory to fetch entries
+            inv = fs_list_inventory(user_id)
+            # try to find last added entry
+            if inv:
+                return inv[-1]
+            return None
+
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -116,6 +171,13 @@ class InventoryService:
 
     @staticmethod
     def use_item(db: Session, user_id: int, inventory_id: int, quantity: int = 1) -> Inventory:
+        if db is None:
+            # Firestore mode: simplified; mark used
+            updated = fs_update_inventory_entry(inventory_id, {'used_quantity': quantity, 'last_used': datetime.utcnow().isoformat()})
+            if not updated:
+                raise HTTPException(status_code=404, detail='Предмет не найден в инвентаре')
+            return updated
+
         inventory_entry = db.query(Inventory).filter(
             and_(Inventory.id == inventory_id, Inventory.user_id == user_id)
         ).first()
@@ -140,6 +202,12 @@ class QuestTemplateService:
 
     @staticmethod
     def create_template(db: Session, user_id: int, template_data: QuestTemplateCreate) -> QuestTemplate:
+        if db is None:
+            # Firestore mode
+            payload = template_data.model_dump()
+            created = fs_create_template(user_id, payload)
+            return created
+
         if template_data.recurrence_type == "weekly" and not template_data.weekdays:
             raise HTTPException(status_code=400, detail="Для weekly типа необходимо указать weekdays")
 
@@ -187,6 +255,8 @@ class QuestTemplateService:
 
     @staticmethod
     def get_templates(db: Session, user_id: int, active_only: bool = False) -> List[QuestTemplate]:
+        if db is None:
+            return fs_list_templates(user_id, active_only=active_only)
         query = db.query(QuestTemplate).filter(QuestTemplate.user_id == user_id)
         if active_only:
             query = query.filter(QuestTemplate.is_active == True)
@@ -194,10 +264,18 @@ class QuestTemplateService:
 
     @staticmethod
     def get_template(db: Session, template_id: int, user_id: int) -> Optional[QuestTemplate]:
+        if db is None:
+            return fs_get_template(template_id)
         return db.query(QuestTemplate).filter(and_(QuestTemplate.id == template_id, QuestTemplate.user_id == user_id)).first()
 
     @staticmethod
     def update_template(db: Session, template_id: int, user_id: int, update_data: QuestTemplateUpdate) -> QuestTemplate:
+        if db is None:
+            updated = fs_update_template(template_id, update_data.model_dump(exclude_unset=True))
+            if not updated:
+                raise HTTPException(status_code=404, detail='Шаблон не найден')
+            return updated
+
         template = QuestTemplateService.get_template(db, template_id, user_id)
         if not template:
             raise HTTPException(status_code=404, detail="Шаблон не найден")
@@ -212,6 +290,8 @@ class QuestTemplateService:
 
     @staticmethod
     def delete_template(db: Session, template_id: int, user_id: int) -> bool:
+        if db is None:
+            return fs_delete_template(template_id)
         template = QuestTemplateService.get_template(db, template_id, user_id)
         if not template:
             raise HTTPException(status_code=404, detail="Шаблон не найден")
@@ -221,6 +301,21 @@ class QuestTemplateService:
 
     @staticmethod
     def generate_due_quests(db: Session, user_id: int) -> List[Quest]:
+        if db is None:
+            # Firestore mode: for simplicity, iterate templates and call create_quest
+            templates = fs_list_templates(user_id, active_only=True)
+            generated = []
+            now = datetime.now()
+            for t in templates:
+                try:
+                    # naive check if should generate using existing fields
+                    # if t has 'recurrence_type' and it's active, just create one
+                    created = fs_create_quest(user_id, t.__dict__)
+                    generated.append(created)
+                except Exception:
+                    continue
+            return generated
+
         templates = QuestTemplateService.get_templates(db, user_id, active_only=True)
         generated = []
         now = datetime.now()
@@ -235,6 +330,11 @@ class QuestTemplateService:
 
     @staticmethod
     def trigger_generation(db: Session, template_id: int, user_id: int) -> Quest:
+        if db is None:
+            tpl = fs_get_template(template_id)
+            if not tpl:
+                raise HTTPException(status_code=404, detail='Шаблон не найден')
+            return fs_create_quest(user_id, tpl.__dict__)
         template = QuestTemplateService.get_template(db, template_id, user_id)
         if not template:
             raise HTTPException(status_code=404, detail="Шаблон не найден")

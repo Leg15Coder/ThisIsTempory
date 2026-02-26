@@ -16,6 +16,10 @@ from app.auth.profile_routes import router as profile_router
 import app.shop.routes as shop_routes
 from app.tasks.database import SessionLocal
 from app.auth.models import User as AuthUser
+try:
+    from app.auth.firestore_user import get_user_by_id as fs_get_user_by_id
+except Exception:
+    fs_get_user_by_id = None
 
 SESSION_MAX_AGE_IN_SECONDS = 86400 * 30
 
@@ -39,9 +43,13 @@ async def lifespan(app: FastAPI):
 
         try:
             from app.tasks.database import Base, engine, ensure_db_migrations
-            ensure_db_migrations()
-            Base.metadata.create_all(bind=engine)
-            print('✅ Таблицы БД проверены/созданы (create_all)')
+            # Если engine не инициализирован (например, FIRESTORE_ENABLED=True), пропускаем создание таблиц
+            if engine is not None:
+                ensure_db_migrations()
+                Base.metadata.create_all(bind=engine)
+                print('✅ Таблицы БД проверены/созданы (create_all)')
+            else:
+                print('ℹ️ SQL engine не инициализирован (вероятно включён FIRESTORE). Пропускаем создание SQL-таблиц.')
         except Exception as e:
             print('⚠️ Предупреждение: не удалось создать таблицы БД при старте:', e)
 
@@ -75,12 +83,21 @@ class CurrentUserMiddleware(BaseHTTPMiddleware):
                 user_id = None
 
             if user_id:
-                db = SessionLocal()
-                try:
-                    user = db.query(AuthUser).filter(AuthUser.id == user_id).first()
-                    request.state.current_user = user
-                finally:
-                    db.close()
+                if SessionLocal is not None:
+                    db = SessionLocal()
+                    try:
+                        user = db.query(AuthUser).filter(AuthUser.id == user_id).first()
+                        request.state.current_user = user
+                    finally:
+                        db.close()
+                else:
+                    # Firestore mode — try to fetch user document
+                    try:
+                        if fs_get_user_by_id is not None:
+                            u = fs_get_user_by_id(str(user_id))
+                            request.state.current_user = u
+                    except Exception:
+                        request.state.current_user = None
         except Exception as e:
             print('Ошибка при получении current_user в CurrentUserMiddleware:', e)
         response = await call_next(request)

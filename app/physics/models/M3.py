@@ -7,7 +7,7 @@ from app.core.fastapi_config import templates
 import math
 from datetime import datetime, timedelta
 
-router = APIRouter(prefix='/physics/M3')
+router = APIRouter(prefix='/M3')
 
 
 class MissionFailException(RuntimeError):

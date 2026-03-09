@@ -32,7 +32,7 @@ class ElectrostaticsRequest(BaseModel):
     mode: str = Field("separated", description="Режим: separated | concentric | plates")
     R1: float = Field(..., gt=0, le=1.0, description="Радиус первой сферы / полуразмер пластины (м)")
     R2: float = Field(..., gt=0, le=1.0, description="Радиус второй сферы / полуразмер пластины (м)")
-    d: float = Field(..., ge=0, le=2.0, description="Расстояние между центрами (м)")
+    d: float = Field(..., ge=0, le=10.0, description="Расстояние между центрами (м)")
     V: float = Field(..., gt=0, le=1000, description="Разность потенциалов (В)")
     n_divisions: int = Field(10, ge=3, le=100, description="Количество делений сетки")
 

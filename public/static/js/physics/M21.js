@@ -64,10 +64,13 @@ function setMode(mode) {
 
     const groupD = document.getElementById('group-d');
     const inputD = document.getElementById('d');
+    const labelD = document.getElementById('label-d');
+    const hintD = document.getElementById('hint-d');
     if (cfg.showD) {
         groupD.style.display = '';
-        document.getElementById('label-d').textContent = cfg.labelD;
-        document.getElementById('hint-d').textContent  = cfg.hintD;
+        inputD.style.display = '';
+        labelD.textContent = cfg.labelD || labelD.textContent;
+        hintD.textContent  = cfg.hintD || hintD.textContent;
         if (mode === 'plates') {
             inputD.value = cfg.defaultD;
             inputD.min   = '0.001';
@@ -76,7 +79,8 @@ function setMode(mode) {
             updateMinDistance();
         }
     } else {
-        groupD.style.display = 'none';
+        groupD.style.display = '';
+        inputD.style.display = 'none';
         inputD.value = '0';
     }
 
@@ -152,9 +156,14 @@ function displayResults(data) {
     document.getElementById('Q1-value').textContent  = data.Q1.toExponential(3) + ' Кл';
     document.getElementById('Q2-value').textContent  = data.Q2.toExponential(3) + ' Кл';
     document.getElementById('C-numerical').textContent = (data.C_numerical * 1e12).toFixed(4) + ' пФ';
+    if (typeof data.C_analytical !== 'undefined' && data.C_analytical !== null) {
+        document.getElementById('C-analytical').textContent = (data.C_analytical * 1e12).toFixed(4) + ' пФ';
+    } else {
+        document.getElementById('C-analytical').textContent = '—';
+    }
     document.getElementById('n-elements').textContent  = data.n_elements;
 
-    document.getElementById('field-viz').src      = 'data:image/png;base64,' + data.field_img;
+    document.getElementById('field-viz').src = 'data:image/png;base64,' + data.field_img;
 
     document.getElementById('results').classList.add('active');
     document.getElementById('results').scrollIntoView({ behavior: 'smooth' });

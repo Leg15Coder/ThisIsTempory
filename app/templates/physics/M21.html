@@ -49,7 +49,7 @@
 
                     <div class="input-group" id="group-d">
                         <label for="d" id="label-d">Расстояние между центрами d (м)</label>
-                        <input type="number" id="d" step="0.001" value="0.15" min="0.001" max="2.0">
+                        <input type="number" id="d" step="0.001" value="0.15" min="0.001" max="10.0">
                         <span class="input-hint" id="hint-d">Должно быть > R₁ + R₂</span>
                     </div>
 
@@ -96,6 +96,10 @@
                         <div class="result-item">
                             <strong>Ёмкость (числ.):</strong>
                             <div class="value" id="C-numerical">—</div>
+                        </div>
+                        <div class="result-item">
+                            <strong id="label-C-theory">Ёмкость (теор.):</strong>
+                            <div class="value" id="C-analytical">—</div>
                         </div>
                         <div class="result-item">
                             <strong>Элементов сетки:</strong>

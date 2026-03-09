@@ -11,6 +11,7 @@ from app.auth.firestore_user import (
     get_user_by_id as fs_get_user_by_id,
     update_user as fs_update_user
 )
+from app.auth.response_utils import to_user_response
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -31,7 +32,7 @@ async def profile_page(
 @router.get("/api", response_model=UserResponse)
 async def get_profile(current_user: User = Depends(require_user)):
     """Получить данные профиля (API)"""
-    return UserResponse.model_validate(current_user)
+    return to_user_response(current_user)
 
 
 @router.put("/api", response_model=UserResponse)
@@ -70,7 +71,7 @@ async def update_profile(
         db.commit()
         db.refresh(current_user)
 
-        return UserResponse.model_validate(current_user)
+        return to_user_response(current_user)
 
     # Firestore mode
     # update fields in Firestore
@@ -86,9 +87,9 @@ async def update_profile(
 
     if update_fields:
         updated = fs_update_user(current_user.id, update_fields)
-        return UserResponse.model_validate(updated)
+        return to_user_response(updated)
 
-    return UserResponse.model_validate(current_user)
+    return to_user_response(current_user)
 
 
 @router.put("/settings", response_model=UserResponse)
@@ -111,7 +112,7 @@ async def update_settings(
         db.commit()
         db.refresh(current_user)
 
-        return UserResponse.model_validate(current_user)
+        return to_user_response(current_user)
 
     # Firestore mode
     update_fields = {}
@@ -124,9 +125,9 @@ async def update_settings(
 
     if update_fields:
         updated = fs_update_user(current_user.id, update_fields)
-        return UserResponse.model_validate(updated)
+        return to_user_response(updated)
 
-    return UserResponse.model_validate(current_user)
+    return to_user_response(current_user)
 
 
 @router.post("/change-password")

@@ -24,6 +24,7 @@ from app.auth.firestore_user import (
     get_user_by_id as fs_get_user_by_id,
     update_user as fs_update_user,
 )
+from app.auth.response_utils import to_user_response
 import secrets
 from datetime import timedelta
 
@@ -124,7 +125,7 @@ async def register(
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse.model_validate(new_user)
+            user=to_user_response(new_user)
         )
 
     # Firestore mode
@@ -155,7 +156,7 @@ async def register(
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user=UserResponse.model_validate(created)
+        user=to_user_response(created)
     )
 
 
@@ -193,7 +194,7 @@ async def login(
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse.model_validate(user)
+            user=to_user_response(user)
         )
 
     # Firestore mode
@@ -212,7 +213,7 @@ async def login(
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user=UserResponse.model_validate(existing)
+        user=to_user_response(existing)
     )
 
 
@@ -271,7 +272,7 @@ async def google_auth(
             return TokenResponse(
                 access_token=access_token,
                 refresh_token=refresh_token,
-                user=UserResponse.model_validate(user)
+                user=to_user_response(user)
             )
 
         # Firestore mode
@@ -315,7 +316,7 @@ async def google_auth(
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse.model_validate(user_obj)
+            user=to_user_response(user_obj)
         )
 
     except Exception as e:
@@ -335,7 +336,7 @@ async def logout(request: Request):
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(require_user)):
     """Получить информацию о текущем пользователе"""
-    return UserResponse.model_validate(current_user)
+    return to_user_response(current_user)
 
 
 @router.get('/verify-email', response_class=HTMLResponse)

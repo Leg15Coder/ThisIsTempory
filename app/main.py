@@ -77,7 +77,9 @@ app.add_middleware(
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET_KEY", "your-secret-key-change-in-production"),
-    max_age=SESSION_MAX_AGE_IN_SECONDS
+    max_age=SESSION_MAX_AGE_IN_SECONDS,
+    same_site='none',
+    https_only=True,
 )
 
 
@@ -198,10 +200,23 @@ async def security_headers_middleware(request, call_next):
     response = await call_next(request)
     # Разрешаем отключать COOP для диагностики popup/signInWithPopup
     disable_coop = os.getenv('DISABLE_COOP', '0') in ('1', 'true', 'True')
-    if not disable_coop:
+    # Не добавляем COOP для путей авторизации и статики (popup/signInWithPopup конфликтуют с COOP)
+    path = getattr(request, 'url').path if hasattr(request, 'url') else ''
+    is_auth_path = path.startswith('/auth') or path.startswith('/static') or path.startswith('/_debug')
+    is_ajax = request.headers.get('x-requested-with', '').lower() == 'xmlhttprequest'
+    if not disable_coop and not is_auth_path and not is_ajax:
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+        print(f"[DEBUG] COOP applied for path={path}")
     else:
-        print('[DEBUG] COOP header disabled by DISABLE_COOP env var')
+        print(f"[DEBUG] COOP skipped for path={path}, disable_coop={disable_coop}, is_auth_path={is_auth_path}, is_ajax={is_ajax}")
+    # Для авторизационных путей возвращаем CORS заголовки, необходимые для работы fetch credentials
+    origin = request.headers.get('origin')
+    if is_auth_path and origin:
+        # Echo origin to allow credentials
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        # Expose Set-Cookie for debugging (note: browsers don't expose Set-Cookie to JS, but server log will show it)
+        print(f"[DEBUG] Auth path response Set-Cookie: {response.headers.get('set-cookie')}")
     # Опционально: response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
     csp = (
         "default-src 'self' 'unsafe-inline' https:; "
@@ -244,4 +259,19 @@ async def debug_current_user(request: Request):
             'email': cu.email,
             'username': cu.username
         } if cu else None
+    }
+
+@app.get('/_internal/session_debug')
+async def session_debug(request: Request):
+    """Диагностический endpoint: возвращает сессию и cookies текущего запроса (временный)."""
+    try:
+        print(f"[DEBUG] /_internal/session_debug headers: {dict(request.headers)}")
+    except Exception:
+        pass
+    return {
+        'session_user_id': request.session.get('user_id'),
+        'cookies': dict(request.cookies),
+        'cookie_header': request.headers.get('cookie'),
+        'origin': request.headers.get('origin'),
+        'motify_session_debug_present': bool(request.cookies.get('motify_session_debug'))
     }

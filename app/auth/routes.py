@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from app.tasks.database import get_db
 from app.auth.models import User, RefreshToken, EmailVerification
@@ -280,11 +280,18 @@ async def google_auth(
             print(f"[DEBUG] /auth/google setting session user_id={user.id}")
             request.session["user_id"] = user.id
 
-            return TokenResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                user=to_user_response(user)
-            )
+            payload = {
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'user': to_user_response(user)
+            }
+            resp = JSONResponse(content=payload)
+            # set a debug cookie to help verify Set-Cookie arrives to browser
+            try:
+                resp.set_cookie('motify_session_debug', '1', path='/', secure=True, httponly=False, samesite='None')
+            except Exception as e:
+                print('[DEBUG] Failed to set debug cookie:', e)
+            return resp
 
         # Firestore mode
         existing = fs_get_user_by_email(email)
@@ -326,11 +333,17 @@ async def google_auth(
         print(f"[DEBUG] /auth/google (firestore) setting session user_id={user_obj.id}")
         request.session["user_id"] = user_obj.id
 
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            user=to_user_response(user_obj)
-        )
+        payload = {
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'user': to_user_response(user_obj)
+        }
+        resp = JSONResponse(content=payload)
+        try:
+            resp.set_cookie('motify_session_debug', '1', path='/', secure=True, httponly=False, samesite='None')
+        except Exception as e:
+            print('[DEBUG] Failed to set debug cookie (firestore):', e)
+        return resp
 
     except Exception as e:
         raise HTTPException(

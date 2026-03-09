@@ -37,6 +37,7 @@ async function handleEmailLogin(e) {
     const response = await fetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(formData)
     });
     if (response.ok) {
@@ -57,6 +58,7 @@ async function handleGoogleSignIn() {
     const response = await fetch('/auth/google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ id_token: idToken })
     });
     if (response.ok) {
@@ -93,4 +95,3 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
-

@@ -13,6 +13,12 @@ try:
 except Exception:
     get_firestore_client = None
 
+# NEW: import helper to find by doc id in Firestore
+try:
+    from app.auth.firestore_user import get_user_by_id as fs_get_user_by_id
+except Exception:
+    fs_get_user_by_id = None
+
 security = HTTPBearer(auto_error=False)
 
 
@@ -61,26 +67,33 @@ async def get_current_user(
             if user_id is None:
                 return None
 
+            print(f"[DEBUG] get_current_user: bearer token present, user_id={user_id}, db_present={db is not None}")
+
             if db is not None:
                 try:
                     user = db.query(User).filter(User.id == int(user_id)).first()
                 except Exception:
                     user = None
+                print(f"[DEBUG] get_current_user: SQL lookup result={bool(user)}")
                 return user
 
             # Иначе попробуем Firestore
             try:
                 u = await _find_user_in_firestore(firebase_uid=str(user_id))
+                print(f"[DEBUG] get_current_user: firestore lookup by firebase_uid result={bool(u)}")
                 if u:
                     return u
-            except Exception:
+            except Exception as ex:
+                print(f"[DEBUG] get_current_user: firestore lookup by firebase_uid raised: {ex}")
                 pass
 
             return None
-        except Exception:
+        except Exception as ex:
+            print(f"[DEBUG] get_current_user: bearer token decode failed: {ex}")
             return None
 
     user_id = request.session.get('user_id')
+    print(f"[DEBUG] get_current_user: no bearer token, session_user_id={user_id}, db_present={db is not None}")
     if user_id:
         if db is not None:
             try:
@@ -92,12 +105,27 @@ async def get_current_user(
                     user = db.query(User).filter(User.id == user_id).first()
                 except Exception:
                     user = None
+            print(f"[DEBUG] get_current_user: SQL session lookup result={bool(user)}")
             return user
 
+        # Firestore mode: сначала попробуем найти документ по ID (session хранит doc id)
         try:
+            if fs_get_user_by_id is not None:
+                u = fs_get_user_by_id(str(user_id))
+                print(f"[DEBUG] get_current_user: firestore lookup by doc id result={bool(u)}")
+                if u:
+                    return u
+        except Exception as ex:
+            print(f"[DEBUG] get_current_user: firestore lookup by doc id raised: {ex}")
+            pass
+
+        try:
+            # fallback: поиск по firebase_uid (на случай, если в session хранится firebase_uid)
             u = await _find_user_in_firestore(firebase_uid=str(user_id))
+            print(f"[DEBUG] get_current_user: firestore lookup by firebase_uid fallback result={bool(u)}")
             return u
-        except Exception:
+        except Exception as ex:
+            print(f"[DEBUG] get_current_user: firestore lookup by firebase_uid raised: {ex}")
             return None
 
     return None

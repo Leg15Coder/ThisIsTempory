@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 from pydantic import BaseModel, Field, validator
 
 from app.tasks.database import QuestRarity, QuestStatus, SubtaskType
+from app.tasks.rarity_utils import normalize_to_quest_rarity
 
 
 class SubtaskBase(BaseModel):
@@ -38,6 +39,10 @@ class QuestBase(BaseModel):
     description: str = Field(default="", max_length=2000)
     rarity: QuestRarity
     cost: int = Field(..., ge=0)
+
+    @validator('rarity', pre=True)
+    def normalize_rarity(cls, v: Any):
+        return normalize_to_quest_rarity(v)
 
 
 class QuestCreate(QuestBase):
@@ -97,7 +102,7 @@ class QuestProgressResponse(BaseModel):
 class QuestFilter(BaseModel):
     """Модель фильтрации квестов"""
     search: Optional[str] = Field(None, max_length=100)
-    sort_by: Optional[str] = Field(None, regex='^(created|deadline|title|cost|rarity)$')
-    sort_order: str = Field(default='asc', regex='^(asc|desc)$')
+    sort_by: Optional[str] = Field(None, pattern='^(created|deadline|title|cost|rarity)$')
+    sort_order: str = Field(default='asc', pattern='^(asc|desc)$')
     status: Optional[QuestStatus] = None
     rarity: Optional[QuestRarity] = None

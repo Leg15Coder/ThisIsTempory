@@ -7,6 +7,11 @@ from app.auth.schemas import UserResponse, UserProfileUpdate, UserSettingsUpdate
 from app.auth.dependencies import require_user
 from app.auth.security import verify_password, get_password_hash, validate_password
 from app.core.fastapi_config import templates
+from app.auth.firestore_user import (
+    get_user_by_id as fs_get_user_by_id,
+    update_user as fs_update_user
+)
+from app.auth.response_utils import to_user_response
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -27,7 +32,7 @@ async def profile_page(
 @router.get("/api", response_model=UserResponse)
 async def get_profile(current_user: User = Depends(require_user)):
     """Получить данные профиля (API)"""
-    return UserResponse.model_validate(current_user)
+    return to_user_response(current_user)
 
 
 @router.put("/api", response_model=UserResponse)
@@ -37,34 +42,54 @@ async def update_profile(
     db: Session = Depends(get_db)
 ):
     """Обновить профиль"""
-    if profile_data.username and profile_data.username != current_user.username:
-        existing = db.query(User).filter(
-            User.username == profile_data.username,
-            User.id != current_user.id
-        ).first()
+    # SQL mode
+    if db is not None:
+        if profile_data.username and profile_data.username != current_user.username:
+            existing = db.query(User).filter(
+                User.username == profile_data.username,
+                User.id != current_user.id
+            ).first()
 
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Это имя пользователя уже занято"
-            )
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Это имя пользователя уже занято"
+                )
 
+        if profile_data.display_name is not None:
+            current_user.display_name = profile_data.display_name
+
+        if profile_data.username is not None:
+            current_user.username = profile_data.username
+
+        if profile_data.bio is not None:
+            current_user.bio = profile_data.bio
+
+        if profile_data.avatar_url is not None:
+            current_user.avatar_url = profile_data.avatar_url
+
+        db.commit()
+        db.refresh(current_user)
+
+        return to_user_response(current_user)
+
+    # Firestore mode
+    # update fields in Firestore
+    update_fields = {}
     if profile_data.display_name is not None:
-        current_user.display_name = profile_data.display_name
-
+        update_fields['display_name'] = profile_data.display_name
     if profile_data.username is not None:
-        current_user.username = profile_data.username
-
+        update_fields['username'] = profile_data.username
     if profile_data.bio is not None:
-        current_user.bio = profile_data.bio
-
+        update_fields['bio'] = profile_data.bio
     if profile_data.avatar_url is not None:
-        current_user.avatar_url = profile_data.avatar_url
+        update_fields['avatar_url'] = profile_data.avatar_url
 
-    db.commit()
-    db.refresh(current_user)
+    if update_fields:
+        updated = fs_update_user(current_user.id, update_fields)
+        return to_user_response(updated)
 
-    return UserResponse.model_validate(current_user)
+    return to_user_response(current_user)
 
 
 @router.put("/settings", response_model=UserResponse)
@@ -74,20 +99,35 @@ async def update_settings(
     db: Session = Depends(get_db)
 ):
     """Обновить настройки аккаунта"""
+    if db is not None:
+        if settings.theme is not None:
+            current_user.theme = settings.theme
 
+        if settings.language is not None:
+            current_user.language = settings.language
+
+        if settings.notifications_enabled is not None:
+            current_user.notifications_enabled = settings.notifications_enabled
+
+        db.commit()
+        db.refresh(current_user)
+
+        return to_user_response(current_user)
+
+    # Firestore mode
+    update_fields = {}
     if settings.theme is not None:
-        current_user.theme = settings.theme
-
+        update_fields['theme'] = settings.theme
     if settings.language is not None:
-        current_user.language = settings.language
-
+        update_fields['language'] = settings.language
     if settings.notifications_enabled is not None:
-        current_user.notifications_enabled = settings.notifications_enabled
+        update_fields['notifications_enabled'] = settings.notifications_enabled
 
-    db.commit()
-    db.refresh(current_user)
+    if update_fields:
+        updated = fs_update_user(current_user.id, update_fields)
+        return to_user_response(updated)
 
-    return UserResponse.model_validate(current_user)
+    return to_user_response(current_user)
 
 
 @router.post("/change-password")
@@ -97,28 +137,32 @@ async def change_password(
     db: Session = Depends(get_db)
 ):
     """Смена пароля"""
-    if not current_user.hashed_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Вы используете вход через Google. Смена пароля недоступна."
-        )
+    if db is not None:
+        if not current_user.hashed_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Вы используете вход через Google. Смена пароля недоступна."
+            )
 
-    if not verify_password(password_data.current_password, current_user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Неверный текущий пароль"
-        )
+        if not verify_password(password_data.current_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Неверный текущий пароль"
+            )
 
-    if not validate_password(password_data.new_password):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Новый пароль должен содержать минимум 8 символов"
-        )
+        if not validate_password(password_data.new_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Новый пароль должен содержать минимум 8 символов"
+            )
 
-    current_user.hashed_password = get_password_hash(password_data.new_password)
-    db.commit()
+        current_user.hashed_password = get_password_hash(password_data.new_password)
+        db.commit()
 
-    return {"message": "Пароль успешно изменён"}
+        return {"message": "Пароль успешно изменён"}
+
+    # Firestore mode: change password not supported (handled by Firebase auth)
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Смена пароля не поддерживается в Firestore режиме')
 
 
 @router.delete("/api")
@@ -127,7 +171,15 @@ async def delete_account(
     db: Session = Depends(get_db)
 ):
     """Удалить аккаунт"""
-    current_user.is_active = False
-    db.commit()
+    if db is not None:
+        current_user.is_active = False
+        db.commit()
 
-    return {"message": "Аккаунт деактивирован"}
+        return {"message": "Аккаунт деактивирован"}
+
+    # Firestore mode
+    from app.auth.firestore_user import delete_user as fs_delete_user
+    ok = fs_delete_user(current_user.id)
+    if ok:
+        return {"message": "Аккаунт деактивирован"}
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Не удалось удалить аккаунт в Firestore')

@@ -14,6 +14,7 @@ from app.auth.dependencies import require_user
 from app.auth.models import User
 from app.shop.service import QuestTemplateService
 from app.shop.schemas import QuestTemplateCreate
+from app.tasks.rarity_utils import normalize_to_quest_rarity, display_label_from_quest_rarity
 
 BASE_URL = '/quest-app'
 router = APIRouter(prefix=BASE_URL)
@@ -114,7 +115,7 @@ async def create_quest(
     description: str = Form(""),
     deadline_date: Optional[str] = Form(None),
     deadline_time: Optional[str] = Form(None),
-    rarity: QuestRarity = Form(...),
+    rarity: str = Form(...),
     cost: int = Form(...)
 ):
     """Создание нового квеста"""
@@ -139,7 +140,7 @@ async def create_quest(
                 author=author,
                 description=description,
                 cost=cost,
-                rarity=rarity.value,
+                rarity=display_label_from_quest_rarity(rarity),
                 recurrence_type=recurrence_type,
                 duration_hours=duration_hours,
                 weekdays=weekdays,
@@ -182,12 +183,18 @@ async def create_quest(
         except json.JSONDecodeError:
             pass
 
+    # Нормализуем значение rarity из формы: используем централизованную утилиту
+    try:
+        rarity_enum = normalize_to_quest_rarity(rarity)
+    except Exception:
+        rarity_enum = QuestRarity.common
+
     service.create_quest(
         title=title,
         author=author,
         description=description,
         deadline=parsed_deadline,
-        rarity=rarity,
+        rarity=rarity_enum,
         cost=cost,
         parent_ids=[int(pid) for pid in parent_quests] if parent_quests else None,
         subtasks_data=subtasks_data
@@ -262,9 +269,7 @@ async def filter_active_quests(
     find: Optional[str] = Form(None),
 ):
     """Фильтрация и сортировка активных квестов"""
-    db = next(get_db())
-    base_query = db.query(Quest).filter(Quest.status == QuestStatus.active)
-
+    # Разбираем параметры сортировки
     sort_by = None
     sort_order = 'asc'
     if sort_type:
@@ -272,12 +277,74 @@ async def filter_active_quests(
         if len(parts) == 2:
             sort_by, sort_order = parts
 
-    quests = service.filter_quests(
-        base_query=base_query,
-        search=find,
-        sort_by=sort_by,
-        sort_order=sort_order
-    )
+    # Firestore режим: service.db == None
+    if service.db is None:
+        from app.tasks.firestore_service import list_quests as fs_list_quests
+        from app.tasks.database import QuestRarity as DBQuestRarity
+
+        quests_list = fs_list_quests(str(service.user_id), status='active')
+
+        # Поиск (case-insensitive) по основным полям
+        if find:
+            f_lower = find.lower()
+            def matches(q):
+                for field in ('title', 'author', 'description', 'rarity', 'status'):
+                    val = getattr(q, field, None)
+                    if val and f_lower in str(val).lower():
+                        return True
+                return False
+            quests_list = [q for q in quests_list if matches(q)]
+
+            # Попытка найти по дате YYYY-MM-DD (deadline/created)
+            try:
+                date_search = datetime.strptime(find, "%Y-%m-%d").date()
+                def date_match(q):
+                    d = getattr(q, 'deadline', None)
+                    c = getattr(q, 'created', None)
+                    if hasattr(d, 'date') and d.date() == date_search:
+                        return True
+                    if hasattr(c, 'date') and c.date() == date_search:
+                        return True
+                    return False
+                filtered = [q for q in quests_list if date_match(q)]
+                if filtered:
+                    quests_list = filtered
+            except Exception:
+                pass
+
+        # Сортировка
+        if sort_by:
+            reverse = (sort_order != 'asc')
+            if sort_by in ('created', 'deadline'):
+                # None-safe sort: absent dates go to the end
+                quests_list.sort(key=lambda q: getattr(q, sort_by) or datetime.max, reverse=reverse)
+            elif sort_by == 'title':
+                quests_list.sort(key=lambda q: (getattr(q, 'title') or '').lower(), reverse=reverse)
+            elif sort_by == 'cost':
+                quests_list.sort(key=lambda q: int(getattr(q, 'cost', 0) or 0), reverse=reverse)
+            elif sort_by == 'rarity':
+                # Сопоставляем строковые значения редкости с порядком из DB enum
+                order_map = {
+                    DBQuestRarity.common.value: 1,
+                    DBQuestRarity.uncommon.value: 2,
+                    DBQuestRarity.rare.value: 3,
+                    DBQuestRarity.epic.value: 4,
+                    DBQuestRarity.legendary.value: 5,
+                }
+                quests_list.sort(key=lambda q: order_map.get(getattr(q, 'rarity', DBQuestRarity.common.value), 0), reverse=reverse)
+
+        quests = quests_list
+
+    else:
+        db = service.db
+        base_query = db.query(Quest).filter(Quest.status == QuestStatus.active)
+
+        quests = service.filter_quests(
+            base_query=base_query,
+            search=find,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
 
     cards_html = templates.get_template("_quest_cards.html").render(
         request=request,
@@ -296,9 +363,7 @@ async def filter_archive_quests(
     find: Optional[str] = Form(None),
 ):
     """Фильтрация и сортировка архивных квестов"""
-    db = next(get_db())
-    base_query = db.query(Quest).filter(Quest.status != QuestStatus.active)
-
+    # Разбираем параметры сортировки
     sort_by = None
     sort_order = 'asc'
     if sort_type:
@@ -306,12 +371,71 @@ async def filter_archive_quests(
         if len(parts) == 2:
             sort_by, sort_order = parts
 
-    quests = service.filter_quests(
-        base_query=base_query,
-        search=find,
-        sort_by=sort_by,
-        sort_order=sort_order
-    )
+    if service.db is None:
+        from app.tasks.firestore_service import list_quests as fs_list_quests
+        from app.tasks.database import QuestRarity as DBQuestRarity
+
+        quests_list = fs_list_quests(str(service.user_id))
+        # Оставляем только неактивные
+        quests_list = [q for q in quests_list if getattr(q, 'status', None) != 'active']
+
+        if find:
+            f_lower = find.lower()
+            def matches(q):
+                for field in ('title', 'author', 'description', 'rarity', 'status'):
+                    val = getattr(q, field, None)
+                    if val and f_lower in str(val).lower():
+                        return True
+                return False
+            quests_list = [q for q in quests_list if matches(q)]
+
+            try:
+                date_search = datetime.strptime(find, "%Y-%m-%d").date()
+                def date_match(q):
+                    d = getattr(q, 'deadline', None)
+                    c = getattr(q, 'created', None)
+                    if hasattr(d, 'date') and d.date() == date_search:
+                        return True
+                    if hasattr(c, 'date') and c.date() == date_search:
+                        return True
+                    return False
+                filtered = [q for q in quests_list if date_match(q)]
+                if filtered:
+                    quests_list = filtered
+            except Exception:
+                pass
+
+        # Сортировка аналогично
+        if sort_by:
+            reverse = (sort_order != 'asc')
+            if sort_by in ('created', 'deadline'):
+                quests_list.sort(key=lambda q: getattr(q, sort_by) or datetime.max, reverse=reverse)
+            elif sort_by == 'title':
+                quests_list.sort(key=lambda q: (getattr(q, 'title') or '').lower(), reverse=reverse)
+            elif sort_by == 'cost':
+                quests_list.sort(key=lambda q: int(getattr(q, 'cost', 0) or 0), reverse=reverse)
+            elif sort_by == 'rarity':
+                order_map = {
+                    DBQuestRarity.common.value: 1,
+                    DBQuestRarity.uncommon.value: 2,
+                    DBQuestRarity.rare.value: 3,
+                    DBQuestRarity.epic.value: 4,
+                    DBQuestRarity.legendary.value: 5,
+                }
+                quests_list.sort(key=lambda q: order_map.get(getattr(q, 'rarity', DBQuestRarity.common.value), 0), reverse=reverse)
+
+        quests = quests_list
+
+    else:
+        db = service.db
+        base_query = db.query(Quest).filter(Quest.status != QuestStatus.active)
+
+        quests = service.filter_quests(
+            base_query=base_query,
+            search=find,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
 
     cards_html = templates.get_template("_quest_cards.html").render(
         request=request,

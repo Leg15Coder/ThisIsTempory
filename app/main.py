@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.fastapi_config import templates
 from app.core.config import get_settings
@@ -15,8 +16,13 @@ from app.auth.routes import router as auth_router
 from app.auth.profile_routes import router as profile_router
 import app.shop.routes as shop_routes
 from app.physics.main import router as physics_router
+from app.main_page import router as main_router
 from app.tasks.database import SessionLocal
 from app.auth.models import User as AuthUser
+try:
+    from app.auth.firestore_user import get_user_by_id as fs_get_user_by_id
+except Exception:
+    fs_get_user_by_id = None
 
 SESSION_MAX_AGE_IN_SECONDS = 86400 * 30
 
@@ -40,9 +46,13 @@ async def lifespan(app: FastAPI):
 
         try:
             from app.tasks.database import Base, engine, ensure_db_migrations
-            ensure_db_migrations()
-            Base.metadata.create_all(bind=engine)
-            print('✅ Таблицы БД проверены/созданы (create_all)')
+            # Если engine не инициализирован (например, FIRESTORE_ENABLED=True), пропускаем создание таблиц
+            if engine is not None:
+                ensure_db_migrations()
+                Base.metadata.create_all(bind=engine)
+                print('✅ Таблицы БД проверены/созданы (create_all)')
+            else:
+                print('ℹ️ SQL engine не инициализирован (вероятно включён FIRESTORE). Пропускаем создание SQL-таблиц.')
         except Exception as e:
             print('⚠️ Предупреждение: не удалось создать таблицы БД при старте:', e)
 
@@ -59,9 +69,19 @@ app = FastAPI(
 )
 
 app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET_KEY", "your-secret-key-change-in-production"),
-    max_age=SESSION_MAX_AGE_IN_SECONDS
+    max_age=SESSION_MAX_AGE_IN_SECONDS,
+    same_site='none',
+    https_only=True,
 )
 
 
@@ -76,12 +96,21 @@ class CurrentUserMiddleware(BaseHTTPMiddleware):
                 user_id = None
 
             if user_id:
-                db = SessionLocal()
-                try:
-                    user = db.query(AuthUser).filter(AuthUser.id == user_id).first()
-                    request.state.current_user = user
-                finally:
-                    db.close()
+                if SessionLocal is not None:
+                    db = SessionLocal()
+                    try:
+                        user = db.query(AuthUser).filter(AuthUser.id == user_id).first()
+                        request.state.current_user = user
+                    finally:
+                        db.close()
+                else:
+                    # Firestore mode — try to fetch user document
+                    try:
+                        if fs_get_user_by_id is not None:
+                            u = fs_get_user_by_id(str(user_id))
+                            request.state.current_user = u
+                    except Exception:
+                        request.state.current_user = None
         except Exception as e:
             print('Ошибка при получении current_user в CurrentUserMiddleware:', e)
         response = await call_next(request)
@@ -138,6 +167,7 @@ app.include_router(profile_router)
 app.include_router(shop_routes.router)
 app.include_router(tasks_router)
 app.include_router(physics_router)
+app.include_router(main_router)
 
 @app.get("/sw.js", include_in_schema=False)
 async def service_worker():
@@ -172,8 +202,25 @@ async def redirect_quest_app_root():
 @app.middleware("http")
 async def security_headers_middleware(request, call_next):
     response = await call_next(request)
-    # Разрешаем открытие попапов для OAuth (Google) и предотвращаем блокировку
-    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    # Разрешаем отключать COOP для диагностики popup/signInWithPopup
+    disable_coop = os.getenv('DISABLE_COOP', '0') in ('1', 'true', 'True')
+    # Не добавляем COOP для путей авторизации и статики (popup/signInWithPopup конфликтуют с COOP)
+    path = getattr(request, 'url').path if hasattr(request, 'url') else ''
+    is_auth_path = path.startswith('/auth') or path.startswith('/static') or path.startswith('/_debug')
+    is_ajax = request.headers.get('x-requested-with', '').lower() == 'xmlhttprequest'
+    if not disable_coop and not is_auth_path and not is_ajax:
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+        print(f"[DEBUG] COOP applied for path={path}")
+    else:
+        print(f"[DEBUG] COOP skipped for path={path}, disable_coop={disable_coop}, is_auth_path={is_auth_path}, is_ajax={is_ajax}")
+    # Для авторизационных путей возвращаем CORS заголовки, необходимые для работы fetch credentials
+    origin = request.headers.get('origin')
+    if is_auth_path and origin:
+        # Echo origin to allow credentials
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        # Expose Set-Cookie for debugging (note: browsers don't expose Set-Cookie to JS, but server log will show it)
+        print(f"[DEBUG] Auth path response Set-Cookie: {response.headers.get('set-cookie')}")
     # Опционально: response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
     csp = (
         "default-src 'self' 'unsafe-inline' https:; "
@@ -216,4 +263,19 @@ async def debug_current_user(request: Request):
             'email': cu.email,
             'username': cu.username
         } if cu else None
+    }
+
+@app.get('/_internal/session_debug')
+async def session_debug(request: Request):
+    """Диагностический endpoint: возвращает сессию и cookies текущего запроса (временный)."""
+    try:
+        print(f"[DEBUG] /_internal/session_debug headers: {dict(request.headers)}")
+    except Exception:
+        pass
+    return {
+        'session_user_id': request.session.get('user_id'),
+        'cookies': dict(request.cookies),
+        'cookie_header': request.headers.get('cookie'),
+        'origin': request.headers.get('origin'),
+        'motify_session_debug_present': bool(request.cookies.get('motify_session_debug'))
     }

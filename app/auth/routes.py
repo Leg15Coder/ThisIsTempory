@@ -283,7 +283,7 @@ async def google_auth(
             payload = {
                 'access_token': access_token,
                 'refresh_token': refresh_token,
-                'user': to_user_response(user)
+                'user': to_user_response(user).model_dump()
             }
             resp = JSONResponse(content=payload)
             # set a debug cookie to help verify Set-Cookie arrives to browser
@@ -336,7 +336,7 @@ async def google_auth(
         payload = {
             'access_token': access_token,
             'refresh_token': refresh_token,
-            'user': to_user_response(user_obj)
+            'user': to_user_response(user_obj).model_dump()
         }
         resp = JSONResponse(content=payload)
         try:

@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const empty = document.getElementById('shopEmpty');
 
     async function loadItems() {
-        const res = await fetch('/api/shop/items?available_only=false');
+        const res = await fetch('/api/shop/items?available_only=false', { credentials: 'same-origin' });
         const items = await res.json();
         renderItems(items);
     }
@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resp = await fetch('/api/inventory/purchase', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
                     body: JSON.stringify({ shop_item_id: item.id, quantity: qty })
                 });
                 if (!resp.ok) {
@@ -81,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resp = await fetch('/api/shop/items', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(payload)
         });
         if (!resp.ok) {

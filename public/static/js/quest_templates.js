@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleRecurrenceOptions();
 
     async function loadTemplates() {
-        const res = await fetch('/api/quest-templates');
+        const res = await fetch('/api/quest-templates', { credentials: 'same-origin' });
         const items = await res.json();
         renderTemplates(items);
     }
@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const resp = await fetch('/api/quest-templates', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
                 body: JSON.stringify(payload)
             });
             if (!resp.ok) {

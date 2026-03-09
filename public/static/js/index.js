@@ -2,52 +2,64 @@
 const cardsContainer = document.getElementById('cardsContainer');
 const modal = document.getElementById('modal');
 
+// Safe element access helpers
+function el(id){ return document.getElementById(id); }
+
 // Управление модальным окном фильтров
-const openFiltersBtn = document.getElementById('openAdvancedFilters');
-const filtersModal = document.getElementById('filtersModal');
+const openFiltersBtn = el('openAdvancedFilters');
+const filtersModal = el('filtersModal');
 
-const fastSortForm = document.getElementById('fastSortForm');
-const fastSortFormFields = fastSortForm.querySelectorAll('input, select, textarea');
-
-// Расширенные фильтры
-const applyAdvancedBtn = document.getElementById('applyAdvancedFilters');
-const resetFiltersBtn = document.getElementById('resetFilters');
-
-const postURL = fastSortForm.action;
+const fastSortForm = el('fastSortForm');
+const fastSortFormFields = fastSortForm ? fastSortForm.querySelectorAll('input, select, textarea') : [];
 
 // Open modal with card details
 function openModal(id) {
-    let quest_card = document.getElementById(`quest_card_${id}`);
-    if (quest_card) {
-        quest_card.classList.remove("new");
+    try {
+        let quest_card = document.getElementById(`quest_card_${id}`);
+        if (quest_card) {
+            quest_card.classList.remove("new");
+        }
+
+        fetch(`/quest-app/quest/${id}`, { credentials: 'same-origin' })
+            .then(res => res.text())
+            .then(html => {
+                if (!modal) return;
+                modal.innerHTML = html;
+                modal.style.display = 'flex';
+            })
+            .catch(err => {
+                console.error('Failed to load quest modal:', err);
+            });
+    } catch (e) {
+        console.error('openModal error', e);
     }
-
-    fetch(`/quest-app/quest/${id}`)
-        .then(res => res.text())
-        .then(html => {
-            modal.innerHTML = html;
-        });
-
-    modal.style.display = 'flex';
 }
+
+// export to global so inline onclick handlers can call it reliably
+try { window.openModal = openModal; } catch(e){}
 
 // Общая функция для отправки фильтров
 async function applyFilters() {
+    if (!fastSortForm) return;
     const formData = new FormData(fastSortForm);
 
-    // Добавляем данные из расширенных фильтров
-    formData.append('rarity', document.getElementById('advRarity').value);
-    formData.append('deadline_filter', document.getElementById('advDeadline').value);
-    formData.append('author', document.getElementById('advAuthor').value);
+    // Добавляем данные из расширенных фильтров, если есть
+    const advRarity = el('advRarity');
+    const advDeadline = el('advDeadline');
+    const advAuthor = el('advAuthor');
+    if (advRarity) formData.append('rarity', advRarity.value);
+    if (advDeadline) formData.append('deadline_filter', advDeadline.value);
+    if (advAuthor) formData.append('author', advAuthor.value);
 
     try {
-        const response = await fetch(postURL, {
+        const response = await fetch(fastSortForm.action, {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
 
         const data = await response.json();
-        cardsContainer.innerHTML = data.cards_html;
+        if (cardsContainer && data.cards_html) cardsContainer.innerHTML = data.cards_html;
     } catch (error) {
         console.error('Filter error:', error);
     }
@@ -61,80 +73,98 @@ function debouncedApplyFilters() {
 }
 
 // Обработчики событий
-fastSortFormFields.forEach(field => {
-    field.addEventListener('change', debouncedApplyFilters);
-    field.addEventListener('input', debouncedApplyFilters);
-});
+if (fastSortFormFields && fastSortFormFields.length) {
+    fastSortFormFields.forEach(field => {
+        field.addEventListener('change', debouncedApplyFilters);
+        field.addEventListener('input', debouncedApplyFilters);
+    });
+}
 
 // Для расширенных фильтров
-document.querySelectorAll('#filtersModal select, #filtersModal input[type="text"]').forEach(el => {
-    el.addEventListener('change', () => {
-        applyFilters();
+if (el('filtersModal')) {
+    document.querySelectorAll('#filtersModal select, #filtersModal input[type="text"]').forEach(elm => {
+        elm.addEventListener('change', () => {
+            applyFilters();
+        });
     });
-});
+}
 
 // Close modal when clicking outside
-modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-        modal.style.display = 'none';
-    }
-});
+if (modal) {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
 
-openFiltersBtn.addEventListener('click', () => {
-    filtersModal.style.display = 'flex';
-});
+if (openFiltersBtn) {
+    openFiltersBtn.addEventListener('click', () => {
+        if (filtersModal) filtersModal.style.display = 'flex';
+    });
+}
 
-filtersModal.addEventListener('click', (e) => {
-    if (e.target === filtersModal) {
-        applyFilters()
-        filtersModal.style.display = 'none';
-    }
-});
+if (filtersModal) {
+    filtersModal.addEventListener('click', (e) => {
+        if (e.target === filtersModal) {
+            applyFilters()
+            filtersModal.style.display = 'none';
+        }
+    });
+}
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', () => {
     applyFilters();
 });
 
-applyAdvancedBtn.addEventListener('click', function() {
-    const filters = {
-        sortBy: document.getElementById('advSortBy').value,
-        sortOrder: document.getElementById('advSortOrder').value,
-        rarity: document.getElementById('advRarity').value,
-        deadline: document.getElementById('advDeadline').value,
-        author: document.getElementById('advAuthor').value,
-        searchQuery: document.getElementById('advSearchQuery').value,
-        searchIn: {
-            title: document.getElementById('searchInTitle').checked,
-            description: document.getElementById('searchInDescription').checked,
-            author: document.getElementById('searchInAuthor').checked
-        }
-    };
+// handlers for apply/reset buttons
+if (el('applyAdvancedFilters')) {
+    el('applyAdvancedFilters').addEventListener('click', function() {
+        const filters = {
+            sortBy: el('advSortBy') ? el('advSortBy').value : 'created',
+            sortOrder: el('advSortOrder') ? el('advSortOrder').value : 'desc',
+            rarity: el('advRarity') ? el('advRarity').value : 'all',
+            deadline: el('advDeadline') ? el('advDeadline').value : 'all',
+            author: el('advAuthor') ? el('advAuthor').value : '',
+            searchQuery: el('advSearchQuery') ? el('advSearchQuery').value : '',
+            searchIn: {
+                title: el('searchInTitle') ? el('searchInTitle').checked : true,
+                description: el('searchInDescription') ? el('searchInDescription').checked : true,
+                author: el('searchInAuthor') ? el('searchInAuthor').checked : false
+            }
+        };
 
-    console.log('Advanced filters:', filters);
-    filtersModal.style.display = 'none';
-    // Отправить фильтры на сервер
-});
+        console.log('Advanced filters:', filters);
+        if (filtersModal) filtersModal.style.display = 'none';
+        // Отправить фильтры на сервер (если нужно)
+    });
+}
 
-resetFiltersBtn.addEventListener('click', function() {
-    // Сбросить все фильтры в форме
-    document.querySelectorAll('#filtersModal select').forEach(el => {
-        el.value = 'all';
+if (el('resetFilters')) {
+    el('resetFilters').addEventListener('click', function() {
+        // Сбросить все фильтры в форме
+        document.querySelectorAll('#filtersModal select').forEach(elm => {
+            elm.value = 'all';
+        });
+        if (el('advSortBy')) el('advSortBy').value = 'created';
+        if (el('advSortOrder')) el('advSortOrder').value = 'desc';
+        if (el('advAuthor')) el('advAuthor').value = '';
+        if (el('advSearchQuery')) el('advSearchQuery').value = '';
+        document.querySelectorAll('#filtersModal input[type="checkbox"]').forEach(ch => {
+            ch.checked = (ch.id === 'searchInTitle' || ch.id === 'searchInDescription');
+        });
     });
-    document.getElementById('advSortBy').value = 'created';
-    document.getElementById('advSortOrder').value = 'desc';
-    document.getElementById('advAuthor').value = '';
-    document.getElementById('advSearchQuery').value = '';
-    document.querySelectorAll('#filtersModal input[type="checkbox"]').forEach(el => {
-        el.checked = el.id === 'searchInTitle' || el.id === 'searchInDescription';
-    });
-});
+}
 
 function fetchProgress(questId) {
-    fetch(`/quest-app/quest/${questId}/progress`)
+    fetch(`/quest-app/quest/${questId}/progress`, { credentials: 'same-origin' })
         .then(response => response.json())
-        .then(data => updateProgress(data.progress, data.total, data.completed));
+        .then(data => updateProgress(data.progress, data.total, data.completed)).catch(()=>{});
 }
+
+// export helper functions
+try { window.fetchProgress = fetchProgress; } catch(e){}
 
 function updateProgress(percent, total, completed) {
     const progressFill = document.getElementById('progressFill');
@@ -160,6 +190,7 @@ function updateCheckboxSubtask(questId, subtaskId, completed) {
         headers: {
             'Content-Type': 'application/json',
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ completed: completed })
     }).then(() => fetchProgress(questId));
 }
@@ -170,6 +201,10 @@ function updateNumericSubtask(questId, subtaskId, current) {
         headers: {
             'Content-Type': 'application/json',
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ current: parseFloat(current) })
     }).then(() => fetchProgress(questId));
 }
+
+// export to global so inline handlers can call them
+try { window.updateCheckboxSubtask = updateCheckboxSubtask; window.updateNumericSubtask = updateNumericSubtask; } catch(e){}

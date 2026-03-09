@@ -88,18 +88,18 @@
 
     <div class="modal-footer">
           <div>
-              <form action="/complete/{{quest.id}}" method="POST">
+              <form action="{{ base_url }}/complete/{{quest.id}}" method="POST">
                   <button class="modal-btn accept-modal-btn" type="submit">Сдать</button>
               </form>
-              <form action="/delete/{{quest.id}}" method="POST">
+              <form action="{{ base_url }}/delete/{{quest.id}}" method="POST">
                   <button class="modal-btn delete-modal-btn" type="submit">Удалить</button>
               </form>
           </div>
           <div>
-              <form action="/fail/{{quest.id}}" method="POST">
+              <form action="{{ base_url }}/fail/{{quest.id}}" method="POST">
                   <button class="modal-btn decline-modal-btn" type="submit">Провалить</button>
               </form>
-              <form action="/uncomplete/{{quest.id}}" method="POST">
+              <form action="{{ base_url }}/uncomplete/{{quest.id}}" method="POST">
                   <button class="modal-btn unwatched-modal-btn" type="submit">Включить</button>
               </form>
           </div>

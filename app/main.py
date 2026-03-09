@@ -80,7 +80,7 @@ app.add_middleware(
     secret_key=os.getenv("SESSION_SECRET_KEY", "your-secret-key-change-in-production"),
     max_age=SESSION_MAX_AGE_IN_SECONDS,
     same_site='none',
-    https_only=True,
+    https_only=not settings.debug,
 )
 
 

@@ -19,10 +19,10 @@
     </div>
 
     <div class="today-card-actions">
-      <form action="/today/quest/{{ quest.id }}" method="post" class="today-form">
+      <form action="{{ base_url }}/today/quest/{{ quest.id }}" method="post" class="today-form">
         <button type="submit" class="pixel-button accept-btn">✔ Принять</button>
       </form>
-      <form action="/today/quest/{{ quest.id }}" method="post" class="today-form">
+      <form action="{{ base_url }}/today/quest/{{ quest.id }}" method="post" class="today-form">
         <input type="hidden" name="_method" value="DELETE">
         <button type="submit" class="pixel-button decline-btn">✘ Отложить</button>
       </form>

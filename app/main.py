@@ -15,6 +15,7 @@ from app.tasks.main import router as tasks_router
 from app.auth.routes import router as auth_router
 from app.auth.profile_routes import router as profile_router
 import app.shop.routes as shop_routes
+from app.main_page import router as main_router
 from app.tasks.database import SessionLocal
 from app.auth.models import User as AuthUser
 try:
@@ -164,6 +165,7 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(shop_routes.router)
 app.include_router(tasks_router)
+app.include_router(main_router)
 
 @app.get("/sw.js", include_in_schema=False)
 async def service_worker():

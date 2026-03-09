@@ -81,6 +81,11 @@
                 {% set is_authed = current_user %}
                 {% if is_authed %}
                 <li class="menu-item">
+                    <a href="/main" class="menu-link">
+                        <span aria-hidden="true">🏠</span> Главная
+                    </a>
+                </li>
+                <li class="menu-item">
                     <a href="{{ url_for('profile_page') }}" class="menu-link">
                         <span aria-hidden="true">👤</span> Профиль
                     </a>

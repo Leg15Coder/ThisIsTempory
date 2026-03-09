@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: data.get('title'),
                 description: data.get('description') || null,
                 cost: Number(data.get('cost') || 0),
-                rarity: data.get('rarity') || 'Обычный',
+                rarity: data.get('rarity') || 'common',
                 recurrence_type: data.get('recurrence_type'),
                 duration_hours: Number(data.get('duration_hours') || 24),
                 weekdays: weekdaysSelected.length ? weekdaysSelected.join(',') : null,

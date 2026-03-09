@@ -22,6 +22,7 @@ from app.auth.firestore_user import (
     create_user as fs_create_user,
     get_user_by_firebase_uid as fs_get_user_by_firebase_uid,
     get_user_by_id as fs_get_user_by_id,
+    update_user as fs_update_user,
 )
 import secrets
 from datetime import timedelta
@@ -223,13 +224,6 @@ async def google_auth(
 ):
     """Аутентификация через Google"""
 
-    if db is None:
-        print("CRITICAL ERROR: DB session is None in google_auth")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Внутренняя ошибка сервера: база данных недоступна"
-        )
-
     try:
         decoded_token = firebase_service.verify_id_token(auth_request.id_token)
         email = decoded_token.get("email")
@@ -295,14 +289,24 @@ async def google_auth(
             user_obj = created
         else:
             # update fields
-            updated = None
-            try:
-                if not getattr(existing, 'avatar_url', None):
-                    updated = fs_create_user({**existing.__dict__, 'avatar_url': avatar_url})
-                user_obj = existing if updated is None else updated
-            except Exception:
+            to_update = {}
+            if existing.google_id != google_id:
+                to_update['google_id'] = google_id
+            if existing.firebase_uid != google_id:
+                to_update['firebase_uid'] = google_id
+            if not getattr(existing, 'avatar_url', None) and avatar_url:
+                to_update['avatar_url'] = avatar_url
+            if not getattr(existing, 'is_verified', False):
+                to_update['is_verified'] = True
+
+            to_update['last_login'] = datetime.utcnow().isoformat()
+
+            if to_update:
+                user_obj = fs_update_user(existing.id, to_update)
+            else:
                 user_obj = existing
 
+        # Generate tokens
         access_token = create_access_token(data={"sub": str(user_obj.id), "email": user_obj.email})
         refresh_token = create_refresh_token(data={"sub": str(user_obj.id)})
 

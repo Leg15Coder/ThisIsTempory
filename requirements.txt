@@ -22,7 +22,5 @@ mypy==1.9.0
 itsdangerous==2.1.2
 numpy==2.4.2
 python-jose[cryptography]==3.3.0
-
-# Optional heavy packages for production (install separately):
-# pandas
-# scipy
+scipy==1.11.4
+matplotlib==3.8.2

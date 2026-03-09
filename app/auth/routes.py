@@ -1,34 +1,55 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from app.tasks.database import get_db
-from app.auth.models import User, RefreshToken, EmailVerification
+
+from app.auth.dependencies import get_current_user, require_user
+from app.auth.firebase_auth import firebase_service
+from app.auth.mail_utils import send_verification_email
+from app.auth.models import EmailVerification, RefreshToken, User
 from app.auth.schemas import (
-    UserRegister, UserLogin, TokenResponse, UserResponse,
-    GoogleAuthRequest, FirebaseAuthRequest
+    GoogleAuthRequest,
+    TokenResponse,
+    UserLogin,
+    UserRegister,
+    UserResponse,
 )
 from app.auth.security import (
-    verify_password, get_password_hash, create_access_token,
-    create_refresh_token, decode_token, validate_password
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    get_password_hash,
+    validate_password,
+    verify_password,
 )
-from app.auth.firebase_auth import firebase_service
-from app.auth.dependencies import get_current_user, require_user
 from app.core.fastapi_config import templates
-from app.auth.mail_utils import send_verification_email
-from app.auth.firebase_admin import get_firestore_client
+from app.tasks.database import get_db
 from app.auth.firestore_user import (
-    get_user_by_email as fs_get_user_by_email,
     create_user as fs_create_user,
+    get_user_by_email as fs_get_user_by_email,
     get_user_by_firebase_uid as fs_get_user_by_firebase_uid,
     get_user_by_id as fs_get_user_by_id,
     update_user as fs_update_user,
 )
 from app.auth.response_utils import to_user_response
-import secrets
-from datetime import timedelta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _serialize_datetimes(obj: Any) -> Any:
+    """Рекурсивно преобразует datetime в ISO-строки в структуре, состоящей из dict/list/primitive."""
+    if isinstance(obj, datetime):
+        try:
+            return obj.isoformat()
+        except Exception:
+            return str(obj)
+    if isinstance(obj, dict):
+        return {k: _serialize_datetimes(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):  # списки/кортежи
+        return [_serialize_datetimes(v) for v in obj]
+    return obj
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -283,7 +304,7 @@ async def google_auth(
             payload = {
                 'access_token': access_token,
                 'refresh_token': refresh_token,
-                'user': to_user_response(user).model_dump()
+                'user': _serialize_datetimes(to_user_response(user).model_dump())
             }
             resp = JSONResponse(content=payload)
             # set a debug cookie to help verify Set-Cookie arrives to browser
@@ -336,7 +357,7 @@ async def google_auth(
         payload = {
             'access_token': access_token,
             'refresh_token': refresh_token,
-            'user': to_user_response(user_obj).model_dump()
+            'user': _serialize_datetimes(to_user_response(user_obj).model_dump())
         }
         resp = JSONResponse(content=payload)
         try:

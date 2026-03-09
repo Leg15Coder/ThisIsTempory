@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('createItemForm');
     const list = document.getElementById('shopList');
     const empty = document.getElementById('shopEmpty');
 
@@ -67,34 +66,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const data = Object.fromEntries(new FormData(form).entries());
-            const payload = {
-                name: data.name,
-                price: Number(data.price || 0),
-                description: data.description || null,
-                rarity: data.rarity || 'Обычный',
-                icon: data.icon || null,
-                stock: data.stock ? Number(data.stock) : null,
-                is_available: data.is_available === 'on'
-            };
-            const resp = await fetch('/api/shop/items', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!resp.ok) {
+    // Делегированный обработчик submit: ловим submit событий на document
+    async function handleCreateItemSubmit(form) {
+        const data = Object.fromEntries(new FormData(form).entries());
+        const payload = {
+            name: data.name,
+            price: Number(data.price || 0),
+            description: data.description || null,
+            rarity: data.rarity || 'common',
+            icon: data.icon || null,
+            stock: data.stock ? Number(data.stock) : null,
+            is_available: data.is_available === 'on'
+        };
+        const resp = await fetch('/api/shop/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+            try {
                 const err = await resp.json();
                 alert(err.detail || 'Ошибка создания');
-                return;
+            } catch (e) {
+                alert('Ошибка создания');
             }
+            return;
+        }
+        // Сброс формы, закрытие модального оверлея если нужно
+        try {
             form.reset();
-            await loadItems();
-        });
+            // Закрыть оверлей, если глобальная функция доступна
+            if (window.closeShopModal) window.closeShopModal();
+        } catch (e) {}
+        await loadItems();
     }
+
+    // Делегируем submit для форм, которые будут динамически добавлены (например, в оверлей)
+    document.addEventListener('submit', function(e) {
+        const target = e.target;
+        if (!target) return;
+        if (target.id === 'createItemForm') {
+            e.preventDefault();
+            handleCreateItemSubmit(target);
+        }
+    }, true);
 
     loadItems();
 });
-

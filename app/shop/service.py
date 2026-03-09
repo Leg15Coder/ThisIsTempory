@@ -25,6 +25,7 @@ from app.tasks.firestore_service import (
     delete_template as fs_delete_template,
     create_quest as fs_create_quest
 )
+from app.tasks.rarity_utils import normalize_to_item_rarity, display_label_from_item_rarity, display_label_from_quest_rarity, key_from_item_rarity, normalize_to_quest_rarity
 
 class ShopService:
     """Сервис для работы с магазином"""
@@ -33,15 +34,29 @@ class ShopService:
     def create_item(db: Session, user_id: int, item_data: ShopItemCreate) -> ShopItem:
         if db is None:
             # Firestore mode
-            item = fs_create_shop_item(user_id, item_data.model_dump())
+            # Ensure we send readable label
+            try:
+                label = display_label_from_item_rarity(item_data.rarity)
+            except Exception:
+                label = 'Обычный'
+            payload = item_data.model_dump()
+            payload['rarity'] = label
+            item = fs_create_shop_item(str(user_id), payload)
             return item
+
+        # SQL mode: normalize to enum and assign enum value to DB field
+        try:
+            ir = normalize_to_item_rarity(item_data.rarity)
+        except Exception:
+            from app.tasks.database import ItemRarity as _IR
+            ir = _IR.common
 
         item = ShopItem(
             user_id=user_id,
             name=item_data.name,
             description=item_data.description,
             price=item_data.price,
-            rarity=item_data.rarity,
+            rarity=ir,
             icon=item_data.icon,
             is_available=item_data.is_available,
             stock=item_data.stock
@@ -54,7 +69,7 @@ class ShopService:
     @staticmethod
     def get_items(db: Session, user_id: int, available_only: bool = True) -> List[ShopItem]:
         if db is None:
-            return fs_list_shop_items(user_id, available_only=available_only)
+            return fs_list_shop_items(str(user_id), available_only=available_only)
         query = db.query(ShopItem).filter(ShopItem.user_id == user_id)
         if available_only:
             query = query.filter(ShopItem.is_available == True)
@@ -63,7 +78,7 @@ class ShopService:
     @staticmethod
     def get_item(db: Session, item_id: int, user_id: int) -> Optional[ShopItem]:
         if db is None:
-            return fs_get_shop_item(user_id, item_id)
+            return fs_get_shop_item(str(user_id), str(item_id))
         return db.query(ShopItem).filter(
             and_(ShopItem.id == item_id, ShopItem.user_id == user_id)
         ).first()
@@ -73,7 +88,12 @@ class ShopService:
         if db is None:
             # Firestore mode
             update_dict = update_data.model_dump(exclude_unset=True)
-            updated = fs_update_shop_item(item_id, update_dict)
+            if 'rarity' in update_dict:
+                try:
+                    update_dict['rarity'] = display_label_from_item_rarity(update_dict['rarity'])
+                except Exception:
+                    update_dict['rarity'] = 'Обычный'
+            updated = fs_update_shop_item(str(item_id), update_dict)
             if not updated:
                 raise HTTPException(status_code=404, detail="Предмет не найден")
             return updated
@@ -83,6 +103,14 @@ class ShopService:
             raise HTTPException(status_code=404, detail="Предмет не найден")
 
         update_dict = update_data.model_dump(exclude_unset=True)
+        # Если пришло поле rarity — нормализуем в enum
+        if 'rarity' in update_dict:
+            try:
+                update_dict['rarity'] = normalize_to_item_rarity(update_dict['rarity'])
+            except Exception:
+                from app.tasks.database import ItemRarity as _IR
+                update_dict['rarity'] = _IR.common
+
         for key, value in update_dict.items():
             setattr(item, key, value)
 
@@ -94,7 +122,7 @@ class ShopService:
     def delete_item(db: Session, item_id: int, user_id: int) -> bool:
         if db is None:
             # Firestore mode
-            ok = fs_update_shop_item(item_id, {'is_available': False})  # soft-delete
+            ok = fs_update_shop_item(str(item_id), {'is_available': False})  # soft-delete
             return True if ok else False
 
         item = ShopService.get_item(db, item_id, user_id)
@@ -119,15 +147,15 @@ class InventoryService:
         if db is None:
             # Firestore mode: use transactional purchase implementation
             from app.tasks.firestore_service import get_shop_item as fs_get_shop_item, purchase_shop_item
-            shop_item = fs_get_shop_item(user_id, shop_item_id)
+            shop_item = fs_get_shop_item(str(user_id), str(shop_item_id))
             if not shop_item:
                 raise HTTPException(status_code=404, detail="Предмет не найден")
             try:
-                updated_user = purchase_shop_item(user_id, shop_item_id, quantity)
+                updated_user = purchase_shop_item(str(user_id), str(shop_item_id), quantity)
             except Exception as e:
                 raise HTTPException(status_code=400, detail=str(e))
             # Return minimal inventory info: list_inventory to fetch entries
-            inv = fs_list_inventory(user_id)
+            inv = fs_list_inventory(str(user_id))
             # try to find last added entry
             if inv:
                 return inv[-1]
@@ -205,6 +233,8 @@ class QuestTemplateService:
         if db is None:
             # Firestore mode
             payload = template_data.model_dump()
+            # ensure readable label
+            payload['rarity'] = display_label_from_quest_rarity(template_data.rarity)
             created = fs_create_template(user_id, payload)
             return created
 
@@ -232,13 +262,19 @@ class QuestTemplateService:
             except Exception:
                 end_at = None
 
+        # Нормализуем rarity в читабельную метку
+        try:
+            rarity_label = display_label_from_quest_rarity(template_data.rarity)
+        except Exception:
+            rarity_label = display_label_from_quest_rarity(None)
+
         template = QuestTemplate(
             user_id=user_id,
             title=template_data.title,
             author=template_data.author,
             description=template_data.description,
             cost=template_data.cost,
-            rarity=template_data.rarity,
+            rarity=rarity_label,
             scope=template_data.scope,
             recurrence_type=template_data.recurrence_type,
             duration_hours=template_data.duration_hours,
@@ -256,7 +292,10 @@ class QuestTemplateService:
     @staticmethod
     def get_templates(db: Session, user_id: int, active_only: bool = False) -> List[QuestTemplate]:
         if db is None:
-            return fs_list_templates(user_id, active_only=active_only)
+            templates = fs_list_templates(str(user_id))
+            if active_only:
+                templates = [t for t in templates if getattr(t, 'is_active', True)]
+            return templates
         query = db.query(QuestTemplate).filter(QuestTemplate.user_id == user_id)
         if active_only:
             query = query.filter(QuestTemplate.is_active == True)
@@ -265,7 +304,7 @@ class QuestTemplateService:
     @staticmethod
     def get_template(db: Session, template_id: int, user_id: int) -> Optional[QuestTemplate]:
         if db is None:
-            return fs_get_template(template_id)
+            return fs_get_template(str(template_id))
         return db.query(QuestTemplate).filter(and_(QuestTemplate.id == template_id, QuestTemplate.user_id == user_id)).first()
 
     @staticmethod
@@ -303,7 +342,7 @@ class QuestTemplateService:
     def generate_due_quests(db: Session, user_id: int) -> List[Quest]:
         if db is None:
             # Firestore mode: for simplicity, iterate templates and call create_quest
-            templates = fs_list_templates(user_id, active_only=True)
+            templates = fs_list_templates(str(user_id))
             generated = []
             now = datetime.now()
             for t in templates:

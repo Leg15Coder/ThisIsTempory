@@ -223,6 +223,13 @@ async def google_auth(
 ):
     """Аутентификация через Google"""
 
+    if db is None:
+        print("CRITICAL ERROR: DB session is None in google_auth")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Внутренняя ошибка сервера: база данных недоступна"
+        )
+
     try:
         decoded_token = firebase_service.verify_id_token(auth_request.id_token)
         email = decoded_token.get("email")

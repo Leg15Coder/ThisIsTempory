@@ -62,7 +62,8 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()
+        if db:
+            db.close()
 
 
 class QuestRarity(str, enum.Enum):

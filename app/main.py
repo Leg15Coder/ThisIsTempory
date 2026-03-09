@@ -196,8 +196,12 @@ async def redirect_quest_app_root():
 @app.middleware("http")
 async def security_headers_middleware(request, call_next):
     response = await call_next(request)
-    # Разрешаем открытие попапов для OAuth (Google) и предотвращаем блокировку
-    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    # Разрешаем отключать COOP для диагностики popup/signInWithPopup
+    disable_coop = os.getenv('DISABLE_COOP', '0') in ('1', 'true', 'True')
+    if not disable_coop:
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    else:
+        print('[DEBUG] COOP header disabled by DISABLE_COOP env var')
     # Опционально: response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
     csp = (
         "default-src 'self' 'unsafe-inline' https:; "

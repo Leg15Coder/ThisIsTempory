@@ -223,9 +223,18 @@ async def google_auth(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Аутентификация через Google"""
+    """Аутентификация через Google"""
 
     try:
+        # Debug: log incoming headers and cookies to help diagnose redirect-loop / missing session
+        try:
+            print(f"[DEBUG] /auth/google incoming headers: {dict(request.headers)}")
+        except Exception:
+            pass
+        try:
+            print(f"[DEBUG] /auth/google incoming cookies: {request.cookies}")
+        except Exception:
+            pass
         decoded_token = firebase_service.verify_id_token(auth_request.id_token)
         email = decoded_token.get("email")
         google_id = decoded_token.get("uid")
@@ -267,6 +276,8 @@ async def google_auth(
             access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
             refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
+            # Debug: log before setting session
+            print(f"[DEBUG] /auth/google setting session user_id={user.id}")
             request.session["user_id"] = user.id
 
             return TokenResponse(
@@ -311,6 +322,8 @@ async def google_auth(
         access_token = create_access_token(data={"sub": str(user_obj.id), "email": user_obj.email})
         refresh_token = create_refresh_token(data={"sub": str(user_obj.id)})
 
+        # Debug: log before setting session (Firestore branch)
+        print(f"[DEBUG] /auth/google (firestore) setting session user_id={user_obj.id}")
         request.session["user_id"] = user_obj.id
 
         return TokenResponse(
@@ -322,7 +335,7 @@ async def google_auth(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Ошибка Google аутентификации: {str(e)}"
+            detail=f"\u041e\u0448\u0438\u0431\u043a\u0430 Google \u0430\u0443\u0442\u0435\u043d\u0442\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u0438: {str(e)}"
         )
 
 

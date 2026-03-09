@@ -7,7 +7,7 @@ from scipy.signal import find_peaks
 from scipy.special import ellipk
 from app.core.fastapi_config import templates
 
-router = APIRouter(prefix="/physics/M5")
+router = APIRouter(prefix="/M5")
 
 
 class PendulumParams(BaseModel):

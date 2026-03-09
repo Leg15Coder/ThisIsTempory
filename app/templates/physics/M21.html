@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M21 — Электростатика методом моментов</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/physics/M21.css') }}">
+</head>
+<body>
+    <a href="/physics" class="back-btn">← Назад к галерее</a>
+
+    <div class="container">
+        <div class="header">
+            <h1>M21: Электростатика методом моментов</h1>
+            <p id="header-subtitle">Расчёт поля двух заряженных сфер (MoM)</p>
+        </div>
+
+        <div class="content">
+            <div class="input-section">
+                <h2 style="margin-bottom: 20px; color: #2c3e50;">⚙️ Параметры расчёта</h2>
+
+                <div class="mode-selector">
+                    <label class="mode-label">Режим моделирования:</label>
+                    <div class="mode-buttons">
+                        <button class="mode-btn active" data-mode="separated" onclick="setMode('separated')">
+                            🔵🔴 Разделённые сферы
+                        </button>
+                        <button class="mode-btn" data-mode="concentric" onclick="setMode('concentric')">
+                            🎯 Концентрические сферы
+                        </button>
+                        <button class="mode-btn" data-mode="plates" onclick="setMode('plates')">
+                            📄 Плоские пластины
+                        </button>
+                    </div>
+                </div>
+
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label for="R1" id="label-R1">Радиус первой сферы R₁ (м)</label>
+                        <input type="number" id="R1" step="0.001" value="0.05" min="0.001" max="1.0">
+                        <span class="input-hint" id="hint-R1">Диапазон: 0.001 – 1.0 м</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="R2" id="label-R2">Радиус второй сферы R₂ (м)</label>
+                        <input type="number" id="R2" step="0.001" value="0.03" min="0.001" max="1.0">
+                        <span class="input-hint" id="hint-R2">Диапазон: 0.001 – 1.0 м</span>
+                    </div>
+
+                    <div class="input-group" id="group-d">
+                        <label for="d" id="label-d">Расстояние между центрами d (м)</label>
+                        <input type="number" id="d" step="0.001" value="0.15" min="0.001" max="10.0">
+                        <span class="input-hint" id="hint-d">Должно быть > R₁ + R₂</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="V">Разность потенциалов V (В)</label>
+                        <input type="number" id="V" step="1" value="100" min="1" max="1000">
+                        <span class="input-hint">Диапазон: 1 – 1000 В</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="n_divisions">Делений сетки (на сторону)</label>
+                        <input type="number" id="n_divisions" step="1" value="12" min="3" max="100">
+                        <span class="input-hint">3–15: быстро</span>
+                    </div>
+                </div>
+
+                <button class="calculate-btn" onclick="calculate()">
+                    🚀 Рассчитать
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="color: #7f8c8d; font-size: 1.1em;">Выполняется расчёт... Пожалуйста, подождите</p>
+            </div>
+
+            <div class="error-message" id="error">
+                <strong>❌ Ошибка:</strong>
+                <p id="error-text"></p>
+            </div>
+
+            <div class="results" id="results">
+                <div class="results-summary">
+                    <h2>📊 Результаты расчёта</h2>
+                    <div class="results-grid">
+                        <div class="result-item">
+                            <strong id="label-Q1">Заряд объекта 1:</strong>
+                            <div class="value" id="Q1-value">—</div>
+                        </div>
+                        <div class="result-item">
+                            <strong id="label-Q2">Заряд объекта 2:</strong>
+                            <div class="value" id="Q2-value">—</div>
+                        </div>
+                        <div class="result-item">
+                            <strong>Ёмкость (числ.):</strong>
+                            <div class="value" id="C-numerical">—</div>
+                        </div>
+                        <div class="result-item">
+                            <strong id="label-C-theory">Ёмкость (теор.):</strong>
+                            <div class="value" id="C-analytical">—</div>
+                        </div>
+                        <div class="result-item">
+                            <strong>Элементов сетки:</strong>
+                            <div class="value" id="n-elements">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="visualization-grid">
+                    <div class="viz-card">
+                        <h3>⚡ Силовые линии электрического поля</h3>
+                        <img id="field-viz" src="" alt="Силовые линии">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', path='js/physics/M21.js') }}" defer></script>
+</body>
+</html>

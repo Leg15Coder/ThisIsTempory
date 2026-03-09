@@ -7,7 +7,7 @@ from typing import List
 import numpy as np
 from app.core.fastapi_config import templates
 
-router = APIRouter(prefix="/physics/M10")
+router = APIRouter(prefix="/M10")
 simulator = None
 
 

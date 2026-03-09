@@ -289,7 +289,6 @@
     </div>
 
     <script>
-        // Данные о моделях
         const models = [
             {
                 id: 'projectile-motion',
@@ -322,10 +321,17 @@
                 image: '{{ url_for('static', path='img/spins-system.png') }}',
                 category: 'mkt',
                 url: '/physics/M10'
+            },
+            {
+                id: 'electrostatics-mom',
+                title: 'Построение линий электростатического поля',
+                description: 'Расчёт электростатического поля двух заряженных сфер методом моментов. Визуализация распределения заряда, силовых линий и сравнение с теоретическими моделями.',
+                image: '{{ url_for('static', path='img/electrostatics-mom.png') }}',
+                category: 'electromagnetism',
+                url: '/physics/M21'
             }
         ];
 
-        // Функция для отрисовки карточек
         function renderModels(filteredModels = models) {
             const grid = document.getElementById('modelsGrid');
             
@@ -334,7 +340,6 @@
                 return;
             }
 
-            // Заменяем проблемную строку в функции renderModels:
             grid.innerHTML = filteredModels.map(model => `
                 <div class="model-card" data-category="${model.category}">
                     <div class="card-image">
@@ -359,7 +364,6 @@
                 </div>
             `).join('');
 
-            // Добавляем обработчики клика на карточки
             document.querySelectorAll('.model-card').forEach(card => {
                 card.addEventListener('click', (e) => {
                     if (!e.target.closest('.card-link')) {
@@ -372,12 +376,10 @@
             });
         }
 
-        // Инициализация
         document.addEventListener('DOMContentLoaded', () => {
             renderModels();
         });
 
-        // Обработка ошибок загрузки изображений
         document.addEventListener('error', (e) => {
             if (e.target.tagName === 'IMG' && e.target.parentElement.classList.contains('card-image')) {
                 e.target.style.display = 'none';

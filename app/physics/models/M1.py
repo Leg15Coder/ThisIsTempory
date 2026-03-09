@@ -1,12 +1,12 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 from fastapi import HTTPException, Request, APIRouter
 import math
 
 from app.core.fastapi_config import templates
 
 
-router = APIRouter(prefix="/physics/M1")
+router = APIRouter(prefix="/M1")
 
 
 class TrajectoryRequest(BaseModel):

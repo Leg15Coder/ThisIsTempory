@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
@@ -29,12 +29,12 @@ class FirebaseAuthRequest(BaseModel):
 
 class UserResponse(BaseModel):
     """Публичная информация о пользователе"""
-    id: int
+    id: Union[int, str]
     email: str
-    username: Optional[str]
+    username: Optional[str] = None
     display_name: str
-    avatar_url: Optional[str]
-    bio: Optional[str]
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
     is_verified: bool
     created_at: datetime
 

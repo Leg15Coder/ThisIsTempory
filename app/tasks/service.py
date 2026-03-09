@@ -2,10 +2,11 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, case
+from fastapi import HTTPException
 
 from app.tasks.database import (
     Quest, QuestStatus, QuestRarity, CheckboxSubtask,
-    NumericSubtask, QuestGenerator
+    NumericSubtask
 )
 from app.tasks.firestore_service import (
     list_quests as fs_list_quests,
@@ -14,6 +15,7 @@ from app.tasks.firestore_service import (
     update_quest as fs_update_quest,
     delete_quest as fs_delete_quest
 )
+from app.shop.service import QuestTemplateService
 
 class QuestService:
     """Сервис для работы с квестами"""
@@ -31,7 +33,7 @@ class QuestService:
     def get_quest_by_id(self, quest_id: int) -> Optional[Quest]:
         """Получить квест по ID (только для текущего пользователя)"""
         if self.db is None:
-            return fs_get_quest(quest_id)
+            return fs_get_quest(str(quest_id))
         return self.db.query(Quest).filter(
             Quest.id == quest_id,
             self._get_user_filter()
@@ -155,10 +157,10 @@ class QuestService:
     def mark_quest_read(self, quest_id: int) -> Optional[Quest]:
         """Отметить квест как прочитанный"""
         if self.db is None:
-            q = fs_get_quest(quest_id)
+            q = fs_get_quest(str(quest_id))
             if q:
                 # Firestore: set is_new false
-                fs_update_quest(quest_id, {'is_new': False})
+                fs_update_quest(str(quest_id), {'is_new': False})
             return q
         quest = self.get_quest_by_id(quest_id)
         if quest:
@@ -169,10 +171,10 @@ class QuestService:
     def complete_quest(self, quest_id: int) -> Optional[Quest]:
         """Завершить квест успешно"""
         if self.db is None:
-            q = fs_get_quest(quest_id)
+            q = fs_get_quest(str(quest_id))
             if not q:
                 return None
-            fs_update_quest(quest_id, {'status': 'finished'})
+            fs_update_quest(str(quest_id), {'status': 'finished'})
             try:
                 from app.tasks.firestore_service import update_user_currency
                 # начислить стоимость квеста пользователю
@@ -180,7 +182,7 @@ class QuestService:
                     update_user_currency(str(q.user_id), int(getattr(q, 'cost', 0) or 0))
             except Exception:
                 pass
-            return fs_get_quest(quest_id)
+            return fs_get_quest(str(quest_id))
 
         quest = self.get_quest_by_id(quest_id)
         if quest:
@@ -196,11 +198,11 @@ class QuestService:
     def fail_quest(self, quest_id: int) -> Optional[Quest]:
         """Провалить квест"""
         if self.db is None:
-            q = fs_get_quest(quest_id)
+            q = fs_get_quest(str(quest_id))
             if not q:
                 return None
-            fs_update_quest(quest_id, {'status': 'failed'})
-            return fs_get_quest(quest_id)
+            fs_update_quest(str(quest_id), {'status': 'failed'})
+            return fs_get_quest(str(quest_id))
 
         quest = self.get_quest_by_id(quest_id)
         if quest:
@@ -212,8 +214,8 @@ class QuestService:
     def return_to_active(self, quest_id: int) -> Optional[Quest]:
         """Вернуть квест в активное состояние"""
         if self.db is None:
-            fs_update_quest(quest_id, {'status': 'active'})
-            return fs_get_quest(quest_id)
+            fs_update_quest(str(quest_id), {'status': 'active'})
+            return fs_get_quest(str(quest_id))
         quest = self.get_quest_by_id(quest_id)
         if quest:
             quest.status = QuestStatus.active
@@ -224,7 +226,7 @@ class QuestService:
     def delete_quest(self, quest_id: int) -> bool:
         """Удалить квест"""
         if self.db is None:
-            return fs_delete_quest(quest_id)
+            return fs_delete_quest(str(quest_id))
         quest = self.get_quest_by_id(quest_id)
         if quest:
             self.db.delete(quest)
@@ -243,8 +245,8 @@ class QuestService:
     def set_quest_scope(self, quest_id: int, scope: str) -> Optional[Quest]:
         """Установить область видимости квеста (today/not_today)"""
         if self.db is None:
-            fs_update_quest(quest_id, {'scope': scope})
-            return fs_get_quest(quest_id)
+            fs_update_quest(str(quest_id), {'scope': scope})
+            return fs_get_quest(str(quest_id))
         quest = self.get_quest_by_id(quest_id)
         if quest:
             quest.scope = scope
@@ -380,7 +382,7 @@ class SubtaskService:
     def get_quest_progress(self, quest_id: int) -> Dict[str, Any]:
         """Получить прогресс квеста"""
         if self.db is None:
-            q = fs_get_quest(quest_id)
+            q = fs_get_quest(str(quest_id))
             if not q:
                 return {"progress": 0, "total": 0, "completed": 0}
             # naive progress calculation from subtasks
@@ -405,52 +407,50 @@ class SubtaskService:
 
     @staticmethod
     def generate_due_quests(db: Session, user_id: int) -> List[Quest]:
-         if db is None:
--            # Firestore mode: for simplicity, iterate templates and call create_quest
--            templates = fs_list_templates(user_id, active_only=True)
--            generated = []
--            now = datetime.now()
--            for t in templates:
--                try:
--                    # naive check if should generate using existing fields
--                    # if t has 'recurrence_type' and it's active, just create one
--                    created = fs_create_quest(user_id, t.__dict__)
--                    generated.append(created)
--                except Exception:
--                    continue
--            return generated
-+            # Firestore mode: use robust template-generation helpers
-+            from app.tasks.firestore_service import list_templates as fs_list_templates
-+            from app.tasks.firestore_service import should_generate_template, generate_quest_from_template
-+
-+            templates = fs_list_templates(user_id)
-+            generated = []
-+            now = datetime.utcnow()
-+            for t in templates:
-+                try:
-+                    # convert SimpleNamespace or dict to dict
-+                    tdoc = t.__dict__ if hasattr(t, '__dict__') else dict(t)
-+                    if should_generate_template(tdoc, now=now):
-+                        created = generate_quest_from_template(tdoc, str(user_id))
-+                        if created:
-+                            generated.append(created)
-+                except Exception:
-+                    continue
-+            return generated
-     def trigger_generation(db: Session, template_id: int, user_id: int) -> Quest:
-         if db is None:
--            tpl = fs_get_template(template_id)
--            if not tpl:
--                raise HTTPException(status_code=404, detail='Шаблон не найден')
--            return fs_create_quest(user_id, tpl.__dict__)
-+            tpl = fs_get_template(template_id)
-+            if not tpl:
-+                raise HTTPException(status_code=404, detail='Шаблон не найден')
-+            tdoc = tpl.__dict__ if hasattr(tpl, '__dict__') else dict(tpl)
-+            from app.tasks.firestore_service import generate_quest_from_template
-+            created = generate_quest_from_template(tdoc, str(user_id))
-+            return created
-         template = QuestTemplateService.get_template(db, template_id, user_id)
-         if not template:
-             raise HTTPException(status_code=404, detail="Шаблон не найден")
-         return template.generate_quest(db)
+        if db is None:
+            # Firestore mode: use robust template-generation helpers
+            from app.tasks.firestore_service import list_templates as fs_list_templates
+            from app.tasks.firestore_service import should_generate_template, generate_quest_from_template
+
+            templates = fs_list_templates(str(user_id))
+            generated = []
+            now = datetime.now()
+            for t in templates:
+                try:
+                    # convert SimpleNamespace or dict to dict
+                    tdoc = t.__dict__ if hasattr(t, '__dict__') else dict(t)
+                    if should_generate_template(tdoc, now=now):
+                        created = generate_quest_from_template(tdoc, str(user_id))
+                        if created:
+                            generated.append(created)
+                except Exception:
+                    continue
+            return generated
+
+        templates = QuestTemplateService.get_templates(db, user_id, active_only=True)
+        generated = []
+        now = datetime.now()
+        for t in templates:
+            try:
+                if t.should_generate(now):
+                    q = t.generate_quest(db)
+                    generated.append(q)
+            except Exception:
+                continue
+        return generated
+
+    @staticmethod
+    def trigger_generation(db: Session, template_id: int, user_id: int) -> Quest:
+        if db is None:
+            from app.tasks.firestore_service import get_template as fs_get_template
+            tpl = fs_get_template(str(template_id))
+            if not tpl:
+                raise HTTPException(status_code=404, detail='Шаблон не найден')
+            tdoc = tpl.__dict__ if hasattr(tpl, '__dict__') else dict(tpl)
+            from app.tasks.firestore_service import generate_quest_from_template
+            created = generate_quest_from_template(tdoc, str(user_id))
+            return created
+        template = QuestTemplateService.get_template(db, template_id, user_id)
+        if not template:
+            raise HTTPException(status_code=404, detail="Шаблон не найден")
+        return template.generate_quest(db)

@@ -1,32 +1,55 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from app.tasks.database import get_db
-from app.auth.models import User, RefreshToken, EmailVerification
+
+from app.auth.dependencies import get_current_user, require_user
+from app.auth.firebase_auth import firebase_service
+from app.auth.mail_utils import send_verification_email
+from app.auth.models import EmailVerification, RefreshToken, User
 from app.auth.schemas import (
-    UserRegister, UserLogin, TokenResponse, UserResponse,
-    GoogleAuthRequest, FirebaseAuthRequest
+    GoogleAuthRequest,
+    TokenResponse,
+    UserLogin,
+    UserRegister,
+    UserResponse,
 )
 from app.auth.security import (
-    verify_password, get_password_hash, create_access_token,
-    create_refresh_token, decode_token, validate_password
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    get_password_hash,
+    validate_password,
+    verify_password,
 )
-from app.auth.firebase_auth import firebase_service
-from app.auth.dependencies import get_current_user, require_user
 from app.core.fastapi_config import templates
-from app.auth.mail_utils import send_verification_email
-from app.auth.firebase_admin import get_firestore_client
+from app.tasks.database import get_db
 from app.auth.firestore_user import (
-    get_user_by_email as fs_get_user_by_email,
     create_user as fs_create_user,
+    get_user_by_email as fs_get_user_by_email,
     get_user_by_firebase_uid as fs_get_user_by_firebase_uid,
     get_user_by_id as fs_get_user_by_id,
+    update_user as fs_update_user,
 )
-import secrets
-from datetime import timedelta
+from app.auth.response_utils import to_user_response
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _serialize_datetimes(obj: Any) -> Any:
+    """Рекурсивно преобразует datetime в ISO-строки в структуре, состоящей из dict/list/primitive."""
+    if isinstance(obj, datetime):
+        try:
+            return obj.isoformat()
+        except Exception:
+            return str(obj)
+    if isinstance(obj, dict):
+        return {k: _serialize_datetimes(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):  # списки/кортежи
+        return [_serialize_datetimes(v) for v in obj]
+    return obj
 
 
 @router.get("/login", response_class=HTMLResponse)
@@ -123,7 +146,7 @@ async def register(
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse.model_validate(new_user)
+            user=to_user_response(new_user)
         )
 
     # Firestore mode
@@ -154,7 +177,7 @@ async def register(
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user=UserResponse.model_validate(created)
+        user=to_user_response(created)
     )
 
 
@@ -192,7 +215,7 @@ async def login(
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=UserResponse.model_validate(user)
+            user=to_user_response(user)
         )
 
     # Firestore mode
@@ -211,7 +234,7 @@ async def login(
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user=UserResponse.model_validate(existing)
+        user=to_user_response(existing)
     )
 
 
@@ -221,9 +244,18 @@ async def google_auth(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """Аутентификация через Google"""
+    """Аутентификация через Google"""
 
     try:
+        # Debug: log incoming headers and cookies to help diagnose redirect-loop / missing session
+        try:
+            print(f"[DEBUG] /auth/google incoming headers: {dict(request.headers)}")
+        except Exception:
+            pass
+        try:
+            print(f"[DEBUG] /auth/google incoming cookies: {request.cookies}")
+        except Exception:
+            pass
         decoded_token = firebase_service.verify_id_token(auth_request.id_token)
         email = decoded_token.get("email")
         google_id = decoded_token.get("uid")
@@ -265,13 +297,22 @@ async def google_auth(
             access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
             refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
+            # Debug: log before setting session
+            print(f"[DEBUG] /auth/google setting session user_id={user.id}")
             request.session["user_id"] = user.id
 
-            return TokenResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                user=UserResponse.model_validate(user)
-            )
+            payload = {
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'user': _serialize_datetimes(to_user_response(user).model_dump())
+            }
+            resp = JSONResponse(content=payload)
+            # set a debug cookie to help verify Set-Cookie arrives to browser
+            try:
+                resp.set_cookie('motify_session_debug', '1', path='/', secure=True, httponly=False, samesite='None')
+            except Exception as e:
+                print('[DEBUG] Failed to set debug cookie:', e)
+            return resp
 
         # Firestore mode
         existing = fs_get_user_by_email(email)
@@ -288,29 +329,47 @@ async def google_auth(
             user_obj = created
         else:
             # update fields
-            updated = None
-            try:
-                if not getattr(existing, 'avatar_url', None):
-                    updated = fs_create_user({**existing.__dict__, 'avatar_url': avatar_url})
-                user_obj = existing if updated is None else updated
-            except Exception:
+            to_update = {}
+            if existing.google_id != google_id:
+                to_update['google_id'] = google_id
+            if existing.firebase_uid != google_id:
+                to_update['firebase_uid'] = google_id
+            if not getattr(existing, 'avatar_url', None) and avatar_url:
+                to_update['avatar_url'] = avatar_url
+            if not getattr(existing, 'is_verified', False):
+                to_update['is_verified'] = True
+
+            to_update['last_login'] = datetime.utcnow().isoformat()
+
+            if to_update:
+                user_obj = fs_update_user(existing.id, to_update)
+            else:
                 user_obj = existing
 
+        # Generate tokens
         access_token = create_access_token(data={"sub": str(user_obj.id), "email": user_obj.email})
         refresh_token = create_refresh_token(data={"sub": str(user_obj.id)})
 
+        # Debug: log before setting session (Firestore branch)
+        print(f"[DEBUG] /auth/google (firestore) setting session user_id={user_obj.id}")
         request.session["user_id"] = user_obj.id
 
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            user=UserResponse.model_validate(user_obj)
-        )
+        payload = {
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'user': _serialize_datetimes(to_user_response(user_obj).model_dump())
+        }
+        resp = JSONResponse(content=payload)
+        try:
+            resp.set_cookie('motify_session_debug', '1', path='/', secure=True, httponly=False, samesite='None')
+        except Exception as e:
+            print('[DEBUG] Failed to set debug cookie (firestore):', e)
+        return resp
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Ошибка Google аутентификации: {str(e)}"
+            detail=f"\u041e\u0448\u0438\u0431\u043a\u0430 Google \u0430\u0443\u0442\u0435\u043d\u0442\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u0438: {str(e)}"
         )
 
 
@@ -324,7 +383,7 @@ async def logout(request: Request):
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(require_user)):
     """Получить информацию о текущем пользователе"""
-    return UserResponse.model_validate(current_user)
+    return to_user_response(current_user)
 
 
 @router.get('/verify-email', response_class=HTMLResponse)

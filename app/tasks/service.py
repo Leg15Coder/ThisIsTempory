@@ -405,6 +405,31 @@ class SubtaskService:
         if not quest:
             return {"progress": 0, "total": 0, "completed": 0}
 
+        total = 0
+        completed = 0
+
+        for st in getattr(quest, 'checkbox_subtasks', []):
+            w = getattr(st, 'weight', 1) or 1
+            total += w
+            if getattr(st, 'completed', False):
+                completed += w
+
+        for st in getattr(quest, 'numeric_subtasks', []):
+            w = getattr(st, 'weight', 1) or 1
+            total += w
+            target = getattr(st, 'target', 0) or 0
+            current = getattr(st, 'current', 0) or 0
+            if target > 0:
+                if current >= target:
+                    completed += w
+                else:
+                    completed += w * (current / target)
+            else:
+                completed += 0
+
+        prog = round((completed / total) * 100) if total > 0 else 0
+        return {"progress": prog, "total": total, "completed": completed}
+
     @staticmethod
     def generate_due_quests(db: Session, user_id: int) -> List[Quest]:
         if db is None:

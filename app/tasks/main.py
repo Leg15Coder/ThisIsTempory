@@ -69,12 +69,14 @@ async def show_help(
 @router.get("/quest/{quest_id}", response_class=HTMLResponse)
 async def show_quest_detail(
     request: Request,
-    quest_id: int,
+    quest_id: str,
     service: QuestService = Depends(get_quest_service),
     current_user: User = Depends(require_user)
 ):
     """Детальная страница квеста"""
-    quest = service.mark_quest_read(quest_id)
+    # Для SQL режима ожидаем int, для Firestore - строковый id
+    qid = int(quest_id) if service.db is not None else quest_id
+    quest = service.mark_quest_read(qid)
     if not quest:
         return RedirectResponse(url=BASE_URL, status_code=status.HTTP_303_SEE_OTHER)
 
@@ -226,7 +228,7 @@ async def show_today(
 @router.post("/today/quest/{quest_id}")
 async def mark_today(
     request: Request,
-    quest_id: int,
+    quest_id: str,
     service: QuestService = Depends(get_quest_service)
 ):
     """Добавить/удалить квест из сегодняшних"""
@@ -237,7 +239,9 @@ async def mark_today(
     else:
         scope = "today"
 
-    service.set_quest_scope(quest_id, scope)
+    qid = int(quest_id) if service.db is not None else quest_id
+
+    service.set_quest_scope(qid, scope)
     return RedirectResponse(f"{BASE_URL}/today", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -447,30 +451,34 @@ async def filter_archive_quests(
 
 
 @router.post("/complete/{quest_id}")
-async def mark_complete(quest_id: int, service: QuestService = Depends(get_quest_service)):
+async def mark_complete(quest_id: str, service: QuestService = Depends(get_quest_service)):
     """Завершить квест успешно"""
-    service.complete_quest(quest_id)
+    qid = int(quest_id) if service.db is not None else quest_id
+    service.complete_quest(qid)
     return RedirectResponse(BASE_URL, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/fail/{quest_id}")
-async def mark_fail(quest_id: int, service: QuestService = Depends(get_quest_service)):
+async def mark_fail(quest_id: str, service: QuestService = Depends(get_quest_service)):
     """Провалить квест"""
-    service.fail_quest(quest_id)
+    qid = int(quest_id) if service.db is not None else quest_id
+    service.fail_quest(qid)
     return RedirectResponse(BASE_URL, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/uncomplete/{quest_id}")
-async def return_to_active(quest_id: int, service: QuestService = Depends(get_quest_service)):
+async def return_to_active(quest_id: str, service: QuestService = Depends(get_quest_service)):
     """Вернуть квест в активное состояние"""
-    service.return_to_active(quest_id)
+    qid = int(quest_id) if service.db is not None else quest_id
+    service.return_to_active(qid)
     return RedirectResponse(f"{BASE_URL}/archive", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/delete/{quest_id}")
-async def delete_quest(quest_id: int, service: QuestService = Depends(get_quest_service)):
+async def delete_quest(quest_id: str, service: QuestService = Depends(get_quest_service)):
     """Удалить квест"""
-    service.delete_quest(quest_id)
+    qid = int(quest_id) if service.db is not None else quest_id
+    service.delete_quest(qid)
     return RedirectResponse(BASE_URL, status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -502,8 +510,9 @@ async def update_numeric_subtask(
 
 @router.get("/quest/{quest_id}/progress")
 async def get_quest_progress(
-    quest_id: int,
+    quest_id: str,
     service: SubtaskService = Depends(get_subtask_service)
 ):
     """Получить прогресс квеста"""
-    return service.get_quest_progress(quest_id)
+    qid = int(quest_id) if service.db is not None else quest_id
+    return service.get_quest_progress(qid)

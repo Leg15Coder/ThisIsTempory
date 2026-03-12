@@ -5,7 +5,7 @@
 
 <div class="today-container">
   {% for quest in quests_for_approve %}
-  <div class="today-card {{get_class(quest.rarity)}}" onclick="openModal({{quest.id}})">
+  <div class="today-card {{get_class(quest.rarity)}}" onclick='openModal({{ quest.id|tojson }})'>
     <div class="today-card-header">
       <h3 class="today-card-title">{{ quest.title }}</h3>
       <div class="today-card-meta">
@@ -30,7 +30,7 @@
   </div>
   {% endfor %}
   {% for quest in quests %}
-  <div class="today-card {{get_class(quest.rarity)}}" onclick="openModal({{quest.id}})">
+  <div class="today-card {{get_class(quest.rarity)}}" onclick='openModal({{ quest.id|tojson }})'>
     <div class="today-card-header">
       <h3 class="today-card-title">{{ quest.title }}</h3>
       <div class="today-card-meta">

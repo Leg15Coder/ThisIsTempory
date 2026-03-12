@@ -9,7 +9,7 @@
                  {% if parent.status == 'Неактивный' %}inactive{% endif %}"
 
                  {% if parent.status != 'Неактивный' %}
-                 onclick="openModal({{parent.id}})"
+                 onclick='openModal({{ parent.id|tojson }})'
                  title="{{parent.title}}"
                  {% endif %}>
                 {% if parent.status == 'Завершённый' %}✓
@@ -36,7 +36,7 @@
                  {% if child.status == 'Неактивный' %}inactive{% endif %}"
 
                  {% if child.status != 'Неактивный' %}
-                 onclick="openModal({{child.id}})"
+                 onclick='openModal({{ child.id|tojson }})'
                  title="{{child.title}}"
                  {% endif %}>
                 {% if child.status == 'Завершённый' %}✓
@@ -61,7 +61,7 @@
             {% if subtask.type == 'checkbox' %}
                 <div class="subtask-item">
                     <input type="checkbox" id="st_{{subtask.id}}" {% if subtask.completed %}checked{% endif %}
-                           onchange="updateCheckboxSubtask({{quest.id}}, {{subtask.id}}, this.checked)">
+                           onchange='updateCheckboxSubtask({{ quest.id|tojson }}, {{ subtask.id|tojson }}, this.checked)'>
                     <label for="st_{{subtask.id}}">{{subtask.description}}</label>
                     <!-- <span class="subtask-weight">({{subtask.weight}} очков)</span> -->
                 </div>
@@ -70,7 +70,7 @@
                     <label>{{subtask.description}}</label>
                     <div class="numeric-progress">
                         <input type="number" value="{{subtask.current}}" min="0" max="{{subtask.target}}"
-                               onchange="updateNumericSubtask({{quest.id}}, {{subtask.id}}, this.value)">
+                               onchange='updateNumericSubtask({{ quest.id|tojson }}, {{ subtask.id|tojson }}, this.value)'>
                         <span>/ {{subtask.target}}</span>
                     </div>
                     <!-- <span class="subtask-weight">({{subtask.weight}} очков)</span> -->

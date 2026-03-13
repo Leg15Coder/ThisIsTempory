@@ -8,6 +8,7 @@ from scipy import linalg
 from typing import Tuple, List, Dict, Optional
 import logging
 import warnings
+import math
 
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, Field, model_validator
@@ -314,16 +315,34 @@ def solve_electrostatics(
     Q2 = float(np.sum(q[[e.sphere_id == 1 for e in all_elements]]))
 
     C_numerical = abs(Q1) / V
+    Rmin, Rmax = min(R1, R2), max(R1, R2)
 
-    if mode == 'concentric':
-        Rmin, Rmax = min(R1, R2), max(R1, R2)
-        C_spherical = 4 * np.pi * EPSILON_0 * Rmin * Rmax / (Rmax - Rmin)
-    elif mode == 'plates':
-        plate_area = (2 * R1) * (2 * R2)
-        C_spherical = EPSILON_0 * plate_area / d
-    else:
-        Rmin, Rmax = min(R1, R2), max(R1, R2)
-        C_spherical = 4 * np.pi * EPSILON_0 / (1 / Rmin + 1 / Rmax - 2 / d - Rmin * Rmax / d / (d ** 2 - Rmin ** 2) - Rmin * Rmax / d / (d ** 2 - Rmax ** 2))
+    try:
+        if mode == 'concentric':
+            C_spherical = 4 * np.pi * EPSILON_0 * Rmin * Rmax / max((Rmax - Rmin), 1e-12) * (1 + d ** 2 * Rmin * Rmax / max((Rmax - Rmin) ** 2, 1e-12) / max((Rmax ** 2 - d ** 2), 1e-12))
+        elif mode == 'plates':
+            side_min = 2.0 * Rmin
+            area_overlap = max(0.0, side_min ** 2)
+            C_by_area = EPSILON_0 * area_overlap / max(d, 1e-12)
+            a_eq = math.sqrt(max(area_overlap, 0.0) / math.pi) if area_overlap > 0 else 0.0
+            fringe = 0.0
+            if a_eq > 0 and d > 0:
+                arg = 8.0 * a_eq / d
+                if arg > 0:
+                    fringe = 2.0 * math.pi * EPSILON_0 * a_eq * (math.log(arg) - 1.0)
+            C_spherical = max(C_by_area + fringe, 0.0)
+        else:
+            denom = (1 / Rmin + 1 / Rmax - 2 / d - Rmin * Rmax / d / max((d ** 2 - Rmin ** 2), 1e-12) - Rmin * Rmax / d / max((d ** 2 - Rmax ** 2), 1e-12))
+            if abs(denom) < 1e-18:
+                raise ZeroDivisionError
+            C_spherical = 4 * np.pi * EPSILON_0 / denom
+    except (ValueError, ZeroDivisionError, OverflowError):
+        if mode == 'plates':
+            side_min = 2.0 * Rmin
+            area_overlap = max(0.0, side_min ** 2)
+            C_spherical = EPSILON_0 * area_overlap / max(d, 1e-12)
+        else:
+            C_spherical = (4 * np.pi * EPSILON_0 * (Rmin + Rmax) / 2.0)
 
     logger.info(f"Q1={Q1:.3e} Кл, Q2={Q2:.3e} Кл, C={C_numerical:.3e} Ф")
 
@@ -339,12 +358,26 @@ def solve_electrostatics(
     }
 
 
-def calculate_capacitance_theoretical(R1: float, R2: float) -> Dict[str, float]:
+def calculate_capacitance_theoretical(R1: float, R2: float, d: Optional[float] = None) -> Dict[str, float]:
     C_isolated_1 = 4 * np.pi * EPSILON_0 * R1
     C_isolated_2 = 4 * np.pi * EPSILON_0 * R2
     Rmin, Rmax = min(R1, R2), max(R1, R2)
     C_spherical = 4 * np.pi * EPSILON_0 * Rmin * Rmax / (Rmax - Rmin) if abs(Rmax - Rmin) > 1e-9 else C_isolated_1
-    return {'C_isolated_1': C_isolated_1, 'C_isolated_2': C_isolated_2, 'C_spherical': C_spherical}
+    result: Dict[str, float] = {'C_isolated_1': C_isolated_1, 'C_isolated_2': C_isolated_2, 'C_spherical': C_spherical}
+    if d is not None and d > 0:
+        side1 = 2.0 * R1
+        side2 = 2.0 * R2
+        side_overlap = min(side1, side2)
+        area_overlap = max(0.0, side_overlap ** 2)
+        C_area = EPSILON_0 * area_overlap / d
+        a_eq = math.sqrt(area_overlap / math.pi) if area_overlap > 0 else 0.0
+        fringe = 0.0
+        if a_eq > 0:
+            arg = max(8.0 * a_eq / d, 1e-12)
+            fringe = 2.0 * math.pi * EPSILON_0 * a_eq * (math.log(arg) - 1.0)
+        C_area_with_edge = max(C_area + fringe, 0.0)
+        result.update({'plate_area': area_overlap, 'C_area': C_area, 'C_area_with_edge': C_area_with_edge})
+    return result
 
 
 def create_field_visualization(result: Dict) -> str:
@@ -596,9 +629,9 @@ async def calculate_electrostatics(params: ElectrostaticsRequest):
 
 
 @router.get("/theory")
-async def get_theoretical_values(R1: float, R2: float):
+async def get_theoretical_values(R1: float, R2: float, d: Optional[float] = None):
     try:
-        theory = calculate_capacitance_theoretical(R1, R2)
+        theory = calculate_capacitance_theoretical(R1, R2, d)
         return {"success": True, **theory}
     except Exception as e:
         logger.error(f"Ошибка теории: {e}")

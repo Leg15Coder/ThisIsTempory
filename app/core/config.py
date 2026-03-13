@@ -26,6 +26,36 @@ class Settings(BaseSettings):
     # Generator settings
     generator_check_interval: int = 300  # секунды
 
+    # Assistant / Gemini
+    gemini_api_key: str = ""
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
+    gemini_model: str = "gemini-2.0-flash"
+    gemini_intent_model: str = "gemini-2.0-flash-lite"
+    gemini_audio_model: str = "gemini-2.0-flash"
+    gemini_timeout_seconds: int = 30
+    gemini_max_retries: int = 3
+    assistant_context_messages: int = 8
+    assistant_memory_db_path: str = "assistant_memory.db"
+    google_calendar_service_account_file: str = ""
+    google_calendar_id: str = ""
+    fast_assistant_system_prompt: str = (
+        "Ты быстрый ассистент. Твои задачи:\n"
+        "1. Отвечать на вопросы кратко\n"
+        "2. Помогать пользователю выполнять действия\n"
+        "3. Если не хватает данных для действия — задать уточняющий вопрос\n"
+        "4. Отвечай кратко и по делу."
+    )
+    psych_assistant_system_prompt: str = (
+        "Ты эмпатичный психологический помощник.\n"
+        "Правила:\n"
+        "- Слушай и поддерживай\n"
+        "- Используй теплый, заботливый тон\n"
+        "- Задавай открытые вопросы\n"
+        "- Не ставь диагнозы и не давай медицинских советов\n"
+        "- Если риск самоповреждения, мягко предложи обратиться к специалисту\n"
+        "- Можешь предлагать простые техники: дыхание, рефрейминг"
+    )
+
     model_config = ConfigDict(
         env_file='.env',
         env_file_encoding='utf-8',

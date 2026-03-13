@@ -156,7 +156,12 @@ async def change_password(
                 detail="Новый пароль должен содержать минимум 8 символов"
             )
 
-        current_user.hashed_password = get_password_hash(password_data.new_password)
+        try:
+            new_hash = get_password_hash(password_data.new_password)
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Не удалось обработать новый пароль.")
+
+        current_user.hashed_password = new_hash
         db.commit()
 
         return {"message": "Пароль успешно изменён"}

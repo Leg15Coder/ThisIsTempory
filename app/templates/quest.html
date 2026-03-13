@@ -24,7 +24,7 @@
             {% if quest.status == 'Завершённый' %}✓
             {% elif quest.status == 'Проваленный' %}✗
             {% elif quest.status == 'Выполняется' %}•
-            {% elif child.status == 'Неактивный' %}?
+            {% elif quest.status == 'Неактивный' %}?
             {% else %}{% endif %}</div>
 
         {% for child in quest.children %}

@@ -20,9 +20,11 @@ python-dateutil==2.9.0
 mangum==0.21.0
 mypy==1.9.0
 itsdangerous==2.1.2
-numpy==2.4.2
+numpy==1.26.4
 python-jose[cryptography]==3.3.0
+scipy==1.14.1
 
 
 # Optional / dev
 pytest==7.4.0
+httpx==0.28.1

@@ -16,6 +16,12 @@ from app.auth.routes import router as auth_router
 from app.auth.profile_routes import router as profile_router
 import app.shop.routes as shop_routes
 from app.main_page import router as main_router
+from app.api.endpoints.assistant import router as assistant_router
+from app.physics.main import router as physics_router
+from app.physics.models.M1 import router as physics_m1_router
+from app.physics.models.M3 import router as physics_m3_router
+from app.physics.models.M5 import router as physics_m5_router
+from app.physics.models.M10 import router as physics_m10_router
 from app.tasks.database import SessionLocal
 from app.auth.models import User as AuthUser
 try:
@@ -75,12 +81,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configure session cookie behavior: be permissive in development (allow HTTP)
+firestore_disabled_env = os.environ.get('FIRESTORE_ENABLED', 'true').lower() in ('0', 'false', 'no', 'off', '')
+dev_like = settings.debug or firestore_disabled_env
+session_same_site = 'lax' if dev_like else 'none'
+session_https_only = False if dev_like else True
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET_KEY", "your-secret-key-change-in-production"),
     max_age=SESSION_MAX_AGE_IN_SECONDS,
-    same_site='none',
-    https_only=not settings.debug,
+    same_site=session_same_site,
+    https_only=session_https_only,
 )
 
 
@@ -166,6 +178,12 @@ app.include_router(profile_router)
 app.include_router(shop_routes.router)
 app.include_router(tasks_router)
 app.include_router(main_router)
+app.include_router(assistant_router)
+app.include_router(physics_router)
+app.include_router(physics_m1_router)
+app.include_router(physics_m3_router)
+app.include_router(physics_m5_router)
+app.include_router(physics_m10_router)
 
 @app.get("/sw.js", include_in_schema=False)
 async def service_worker():

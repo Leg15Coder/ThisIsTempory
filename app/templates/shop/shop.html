@@ -4,13 +4,13 @@
 <div class="shop-container">
     <div class="shop-header">
         <h1 class="shop-title">Магазин артефактов</h1>
-        <div class="shop-header-right" style="display:flex; gap:1rem; align-items:center;">
+        <div class="shop-header-right shop-header-layout">
             <div class="currency-display">
                 💰 Баланс: <span id="currencyValue">{{ current_user.currency if current_user else 0 }}</span>
             </div>
             <div class="shop-actions">
                 <button id="openCreateItem" type="button" class="btn-primary" aria-haspopup="dialog" aria-controls="createItemModal" data-debug-open="shop">
-                    <span style="margin-right:0.5rem;">✦</span> Создать
+                    <span class="shop-create-icon">✦</span> Создать
                 </button>
             </div>
         </div>
@@ -19,7 +19,7 @@
     <div class="form-section">
         <h2>Доступные предметы</h2>
         <div id="shopList" class="shop-grid"></div>
-        <div id="shopEmpty" class="empty-state" style="display:none;">Пока нет предметов</div>
+        <div id="shopEmpty" class="empty-state is-hidden">Пока нет предметов</div>
     </div>
 </div>
 
@@ -82,23 +82,8 @@
 
 <div id="createItemModalContainer" aria-hidden="true"></div>
 
-{% set _t = namespace(v=loop.index if false else None) %}
-<script>
-    const __shopCacheBust = Date.now();
-    (function(){
-        var s1 = document.createElement('script');
-        s1.src = "{{ url_for('static', path='js/shop-init.js') }}?v=" + __shopCacheBust;
-        s1.async = false;
-        document.head.appendChild(s1);
-        var s2 = document.createElement('script');
-        s2.src = "{{ url_for('static', path='js/shop.js') }}?v=" + __shopCacheBust;
-        s2.defer = true;
-        document.head.appendChild(s2);
-        var s3 = document.createElement('script');
-        s3.src = "{{ url_for('static', path='js/shop-fallback.js') }}?v=" + __shopCacheBust;
-        s3.defer = true;
-        document.head.appendChild(s3);
-    })();
-</script>
+<script src="{{ url_for('static', path='js/shop-init.js') }}" defer></script>
+<script src="{{ url_for('static', path='js/shop.js') }}" defer></script>
+<script src="{{ url_for('static', path='js/shop-fallback.js') }}" defer></script>
 
 {% endblock %}

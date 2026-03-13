@@ -1,67 +1,59 @@
 {% extends "base.html" %}
 
 {% block content %}
-<style>
-    .hub-container {
-        max-width: 1100px;
-        margin: 2.5rem auto;
-        padding: 1.5rem;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 1.25rem;
-        align-items: start;
-    }
+<link rel="stylesheet" href="{{ url_for('static', path='css/main-hub.css') }}">
 
-    .hub-card {
-        background: radial-gradient(1200px 400px at 10% 10%, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-        border: 1px solid rgba(255,255,255,0.06);
-        padding: 1.25rem;
-        border-radius: 14px;
-        color: #ffffff;
-        box-shadow: 0 8px 30px rgba(8,6,20,0.6);
-        transition: transform 0.18s ease, box-shadow 0.18s ease;
-        min-height: 140px;
-        display:flex;
-        flex-direction:column;
-        justify-content:space-between;
-    }
-
-    .hub-card:hover { transform: translateY(-6px); box-shadow: 0 18px 50px rgba(8,6,20,0.7); }
-
-    .hub-card h3 { margin-bottom: 0.5rem; font-size: 1.2rem; }
-    .hub-card p { color: rgba(255,255,255,0.85); margin-bottom: 1rem; }
-
-    .hub-actions { display:flex; gap:0.5rem; }
-    .hub-btn { background: linear-gradient(90deg,#6e45e2,#3b82f6); padding:0.6rem 0.9rem; border-radius:10px; color:white; border:none; cursor:pointer; font-weight:600 }
-    .hub-btn.secondary { background: linear-gradient(90deg,#22c1c3,#6ee7b7); }
-
-    @media (max-width:600px){
-        .hub-container { margin:1rem; grid-template-columns: 1fr; }
-    }
-</style>
-
-<div class="hub-container">
-    <div class="hub-card">
-        <div>
-            <h3>⚔️ Квесты</h3>
-            <p>Управляйте своими заданиями: создавайте, выполняйте и отслеживайте прогресс. Быстрый переход в главное приложение квестов.</p>
+<div class="main-hub">
+    <section class="hub-hero">
+        <div class="hub-badge">✨ Центр приложений Motify</div>
+        <h1 class="hub-title">Все ваши инструменты в одном красивом и удобном пространстве</h1>
+        <p class="hub-subtitle">
+            Здесь собраны все подприложения. Переключайтесь между квестами и галереей физических моделей за одно касание —
+            одинаково удобно и на компьютере, и на телефоне.
+        </p>
+        <div class="hub-meta">
+            <div class="hub-chip">⚔️ Квесты и задачи</div>
+            <div class="hub-chip">🧪 Интерактивные физические модели</div>
+            <div class="hub-chip">📱 Адаптивный интерфейс</div>
         </div>
-        <div class="hub-actions">
-            <a href="/quest-app" class="hub-btn">Открыть квесты</a>
-        </div>
-    </div>
+    </section>
 
-    <div class="hub-card">
-        <div>
-            <h3>📊 Галерея физических моделей</h3>
-            <p>Визуальные симуляции и модели — взаимодействуйте с физическими демонстрациями и экспериментами.</p>
-        </div>
-        <div class="hub-actions">
-            <a href="/physics" class="hub-btn secondary">Открыть галерею</a>
-        </div>
-    </div>
+    <section class="hub-grid">
+        <article class="hub-card quests">
+            <div>
+                <div class="hub-icon">⚔️</div>
+                <h3>Квесты</h3>
+                <p>Управляйте задачами как приключениями: создавайте квесты, отслеживайте прогресс, открывайте карточки и работайте с историей.</p>
+                <ul class="hub-points">
+                    <li>• Активные квесты и архив</li>
+                    <li>• Создание и редактирование</li>
+                    <li>• Прогресс по подзадачам</li>
+                </ul>
+            </div>
+            <div class="hub-actions">
+                <a href="/quest-app" class="hub-btn">Открыть квесты</a>
+                <a href="/quest-app/create" class="hub-btn secondary">Создать квест</a>
+            </div>
+        </article>
 
+        <article class="hub-card physics">
+            <div>
+                <div class="hub-icon">🧪</div>
+                <h3>Галерея физических моделей</h3>
+                <p>Запускайте симуляции, исследуйте визуальные эксперименты и быстро переходите к нужной модели из общей галереи.</p>
+                <ul class="hub-points">
+                    <li>• Механика и динамика</li>
+                    <li>• Наглядные интерактивные модели</li>
+                    <li>• Удобный просмотр с телефона</li>
+                </ul>
+            </div>
+            <div class="hub-actions">
+                <a href="/physics" class="hub-btn">Открыть галерею</a>
+            </div>
+        </article>
+    </section>
 </div>
 
-{% endblock %}
+<script src="{{ url_for('static', path='js/main-hub.js') }}" defer></script>
 
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/assistant.css') }}">
+
+<div class="assistant-page assistant-confirm-page">
+    <section class="assistant-shell">
+        <div class="assistant-panel assistant-confirm-panel">
+            <div class="assistant-panel-header">
+                <div>
+                    <div class="assistant-badge">🤖 AI Assistant</div>
+                    <h1 class="assistant-title">Подтверждение AI-квеста</h1>
+                    <p class="assistant-subtitle">Проверь автоматически подготовленный квест, при необходимости подправь поля и только потом создавай его.</p>
+                </div>
+                <a href="/main" class="assistant-secondary-link">← Назад в центр приложений</a>
+            </div>
+
+            <div id="confirmStatus" class="assistant-status" aria-live="polite"></div>
+
+            <form id="assistantConfirmForm" class="assistant-confirm-form">
+                <input type="hidden" id="confirmToken" value="{{ confirmation_token or '' }}">
+                <input type="hidden" id="confirmUserId" value="{{ current_user.id }}">
+                <input type="hidden" id="confirmSessionId" value="{{ session_id or 'assistant-main' }}">
+
+                <div class="assistant-form-grid">
+                    <div class="form-group-modern">
+                        <label for="confirmTitle" class="label-small">Название квеста</label>
+                        <input id="confirmTitle" name="title" type="text" class="input-modern" value="{{ draft.title if draft else '' }}" required>
+                    </div>
+                    <div class="form-group-modern">
+                        <label for="confirmAuthor" class="label-small">Автор</label>
+                        <input id="confirmAuthor" name="author" type="text" class="input-modern" value="{{ draft.author if draft else 'AI Assistant' }}">
+                    </div>
+                    <div class="form-group-modern assistant-col-span-2">
+                        <label for="confirmDescription" class="label-small">Описание</label>
+                        <textarea id="confirmDescription" name="description" class="textarea-modern" rows="4">{{ draft.description if draft else '' }}</textarea>
+                    </div>
+                    <div class="form-group-modern">
+                        <label for="confirmRarity" class="label-small">Редкость</label>
+                        <select id="confirmRarity" name="rarity" class="select-modern">
+                            {% set rarity_value = draft.rarity if draft else 'common' %}
+                            <option value="common" {% if rarity_value == 'common' %}selected{% endif %}>Обычный</option>
+                            <option value="uncommon" {% if rarity_value == 'uncommon' %}selected{% endif %}>Необычный</option>
+                            <option value="rare" {% if rarity_value == 'rare' %}selected{% endif %}>Редкий</option>
+                            <option value="epic" {% if rarity_value == 'epic' %}selected{% endif %}>Эпический</option>
+                            <option value="legendary" {% if rarity_value == 'legendary' %}selected{% endif %}>Легендарный</option>
+                        </select>
+                    </div>
+                    <div class="form-group-modern">
+                        <label for="confirmCost" class="label-small">Награда</label>
+                        <input id="confirmCost" name="cost" type="number" min="0" class="input-modern" value="{{ draft.cost if draft else 100 }}">
+                    </div>
+                    <div class="form-group-modern">
+                        <label for="confirmDeadlineDate" class="label-small">Дата дедлайна</label>
+                        <input id="confirmDeadlineDate" name="deadline_date" type="date" class="input-modern" value="{{ draft.deadline_date if draft else '' }}">
+                    </div>
+                    <div class="form-group-modern">
+                        <label for="confirmDeadlineTime" class="label-small">Время дедлайна</label>
+                        <input id="confirmDeadlineTime" name="deadline_time" type="time" class="input-modern" value="{{ draft.deadline_time if draft else '' }}">
+                    </div>
+                </div>
+
+                <div class="assistant-confirm-actions">
+                    <button type="submit" class="hub-btn assistant-primary-btn">Создать квест</button>
+                    <a href="/main" class="hub-btn secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+
+<script src="{{ url_for('static', path='js/assistant-confirm.js') }}" defer></script>
+{% endblock %}
+

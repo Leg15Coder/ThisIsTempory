@@ -1,0 +1,24 @@
+/* Styles extracted from app/templates/main.html */
+.main-hub{max-width:1220px;margin:0 auto;padding:2rem 1rem 3rem;color:#fff}
+.hub-hero{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.1);border-radius:28px;padding:2rem;background:radial-gradient(circle at top right,rgba(110,69,226,0.45),transparent 34%),radial-gradient(circle at bottom left,rgba(59,130,246,0.3),transparent 38%),linear-gradient(135deg,rgba(15,23,42,0.92),rgba(30,41,59,0.88));box-shadow:0 30px 80px rgba(0,0,0,0.35);margin-bottom:1.5rem}
+.hub-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,0.06),transparent 35%,transparent 60%,rgba(255,255,255,0.04));pointer-events:none}
+.hub-badge{display:inline-flex;align-items:center;gap:.45rem;padding:.45rem .85rem;border-radius:999px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.12);font-size:.92rem;margin-bottom:1rem;backdrop-filter:blur(10px)}
+.hub-title{font-size:clamp(2rem,5vw,3.6rem);line-height:1.05;margin-bottom:.85rem;max-width:760px}
+.hub-subtitle{color:rgba(255,255,255,0.82);max-width:760px;font-size:1.05rem;line-height:1.7;margin-bottom:1.25rem}
+.hub-meta{display:flex;flex-wrap:wrap;gap:.75rem}
+.hub-chip{padding:.65rem .95rem;border-radius:14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.92);font-size:.95rem}
+.hub-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem}
+.hub-card{position:relative;overflow:hidden;border-radius:24px;padding:1.35rem;min-height:260px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(255,255,255,0.08);background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04));box-shadow:0 18px 45px rgba(5,10,30,0.28);backdrop-filter:blur(14px);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.hub-card:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(5,10,30,0.38);border-color:rgba(255,255,255,0.16)}
+.hub-card.quests{background:radial-gradient(circle at top right,rgba(168,85,247,0.26),transparent 30%),linear-gradient(180deg,rgba(91,33,182,0.28),rgba(30,41,59,0.5))}
+.hub-card.physics{background:radial-gradient(circle at top right,rgba(34,197,94,0.24),transparent 30%),linear-gradient(180deg,rgba(14,165,233,0.22),rgba(30,41,59,0.5))}
+.hub-icon{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;font-size:1.9rem;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.14);margin-bottom:1rem}
+.hub-card h3{font-size:1.45rem;margin-bottom:.7rem}
+.hub-card p{color:rgba(255,255,255,0.82);line-height:1.65;margin-bottom:1rem}
+.hub-points{list-style:none;padding:0;margin:0 0 1rem;display:grid;gap:.45rem}
+.hub-points li{color:rgba(255,255,255,0.88);font-size:.96rem}
+.hub-actions{display:flex;flex-wrap:wrap;gap:.75rem}
+.hub-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;min-height:46px;padding:.8rem 1rem;border-radius:14px;text-decoration:none;color:#fff;font-weight:700;border:1px solid rgba(255,255,255,0.12);background:linear-gradient(135deg,#7c3aed,#2563eb);box-shadow:0 10px 25px rgba(37,99,235,0.25)}
+.hub-btn.secondary{background:rgba(255,255,255,0.06);box-shadow:none}
+@media(max-width:700px){.main-hub{padding:1rem .8rem 2rem}.hub-hero{padding:1.25rem;border-radius:22px}.hub-card{min-height:unset}.hub-actions{flex-direction:column}.hub-btn{width:100%}}
+

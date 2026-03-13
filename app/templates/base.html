@@ -3,9 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <script>document.documentElement.classList.remove('no-js');</script>
-    <style>
-        dialog[open] { display: none !important; visibility: hidden !important; pointer-events: none !important; }
-    </style>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="description" content="Motify - Превратите свои задачи в эпические квесты с системой редкости и зависимостей">
@@ -26,11 +23,8 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/sorts.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/today.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/shop.css') }}">
-    <style>
-        .auth-container { margin-top: 50px; }
-    </style>
-
     <link rel="stylesheet" href="{{ url_for('static', path='css/media.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/assistant-quick.css') }}">
 
     <link rel="icon" href="{{ url_for('static', path='favicon.ico') }}" type="image/x-icon">
 
@@ -44,22 +38,9 @@
     <script src="{{ url_for('static', path='js/base.js') }}" defer></script>
     <!-- Analytics loader (external) -->
     <script src="{{ url_for('static', path='js/analytics.js') }}" defer></script>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('Service Worker registered with scope:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('Service Worker registration failed:', error);
-                    });
-            });
-        }
-    </script>
+    <script src="{{ url_for('static', path='js/serviceworker-register.js') }}" defer></script>
 </head>
-<body>
+<body data-user-id="{{ current_user.id if current_user else '' }}" data-assistant-session-id="assistant-main">
     <div class="gradient-bg" aria-hidden="true">
         <div class="circle"></div>
         <div class="circle"></div>
@@ -154,5 +135,15 @@
             <a href="{{ (base_url|default('/quest-app')) }}/help" class="footer-link">Помощь</a>
         </div>
     </footer>
+
+    <!-- Floating quick assistant button (available on every page) -->
+    <div id="quickAssistantWrapper">
+        <button id="quickAssistantBtn" title="Быстрый помощник (зажать для голоса, Ctrl+K на ПК)" aria-label="Быстрый помощник">💬</button>
+        <div id="quickAssistantPanel" class="assistant-hidden" aria-hidden="true">
+            <div id="quickAssistantContent">Загрузка ассистента...</div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', path='js/assistant-quick.js') }}" defer></script>
 </body>
 </html>

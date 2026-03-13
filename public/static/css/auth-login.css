@@ -1,0 +1,22 @@
+/* Extracted from auth/login.html */
+.auth-container{
+    min-height:calc(100vh - 8rem);
+    display:flex;align-items:center;justify-content:center;padding:2rem 1rem;
+}
+.auth-card{max-width:420px;width:100%;background:rgba(30,40,50,0.6);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:2.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.auth-header{text-align:center;margin-bottom:2rem}
+.auth-title{font-size:1.75rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--epic));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
+.auth-subtitle{color:var(--text-secondary);font-size:.9rem}
+.auth-form{display:flex;flex-direction:column;gap:1.25rem}.form-group{display:flex;flex-direction:column;gap:.5rem}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--epic));color:white;border:none;padding:1rem 2rem;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(110,69,226,0.3)}
+.btn-full{width:100%}.auth-divider{position:relative;text-align:center;margin:1.5rem 0}
+.auth-divider::before{content:'';position:absolute;left:0;top:50%;width:100%;height:1px;background:rgba(255,255,255,0.1)}
+.auth-divider span{position:relative;background:rgba(30,40,50,0.6);padding:0 1rem;color:var(--text-secondary);font-size:.85rem}
+.btn-google{width:100%;background:white;color:#333;border:1px solid #ddd;padding:1rem;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.75rem}
+.btn-google:hover{background:#f8f8f8;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.auth-footer{text-align:center;margin-top:1.5rem;color:var(--text-secondary);font-size:.9rem}
+.auth-link{color:var(--accent);text-decoration:none;font-weight:600}
+.auth-link:hover{text-decoration:underline}
+.error-message{margin-top:1rem;padding:1rem;background:rgba(255,0,0,0.1);border:1px solid rgba(255,0,0,0.3);border-radius:8px;color:#ff6b6b;font-size:.9rem}
+

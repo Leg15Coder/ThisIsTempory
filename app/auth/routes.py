@@ -1,4 +1,6 @@
 from datetime import datetime
+from datetime import timedelta
+import secrets
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -34,6 +36,7 @@ from app.auth.firestore_user import (
     update_user as fs_update_user,
 )
 from app.auth.response_utils import to_user_response
+from app.auth.firebase_admin import get_firestore_client
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -83,102 +86,124 @@ async def register(
     db: Session = Depends(get_db)
 ):
     """Регистрация нового пользователя"""
-    # SQL mode
-    if db is not None:
-        existing_user = db.query(User).filter(User.email == user_data.email).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Пользователь с таким email уже существует"
-            )
-
-        if user_data.username:
-            existing_username = db.query(User).filter(User.username == user_data.username).first()
-            if existing_username:
+    print('[DEBUG] /auth/register called with:', user_data.model_dump())
+    try:
+        # SQL mode
+        if db is not None:
+            existing_user = db.query(User).filter(User.email == user_data.email).first()
+            if existing_user:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Это имя пользователя уже занято"
+                    detail="Пользователь с таким email уже существует"
                 )
 
-        if not validate_password(user_data.password):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Пароль должен содержать минимум 8 символов"
+            if user_data.username:
+                existing_username = db.query(User).filter(User.username == user_data.username).first()
+                if existing_username:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Это имя пользователя уже занято"
+                    )
+
+            if not validate_password(user_data.password):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Пароль должен содержать минимум 8 символов"
+                )
+
+            try:
+                hashed_pw = get_password_hash(user_data.password)
+            except Exception as ex:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Не удалось обработать пароль. Убедитесь, что пароль соответствует требованиям.")
+
+            new_user = User(
+                email=user_data.email,
+                username=user_data.username,
+                display_name=user_data.display_name or user_data.email.split('@')[0],
+                hashed_password=hashed_pw,
+                is_verified=False
             )
 
-        new_user = User(
-            email=user_data.email,
-            username=user_data.username,
-            display_name=user_data.display_name or user_data.email.split('@')[0],
-            hashed_password=get_password_hash(user_data.password),
-            is_verified=False
-        )
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
 
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
+            token = secrets.token_urlsafe(32)
+            expires = datetime.utcnow() + timedelta(days=1)
+            ev = EmailVerification(user_id=new_user.id, token=token, expires_at=expires)
+            db.add(ev)
+            db.commit()
 
-        token = secrets.token_urlsafe(32)
-        expires = datetime.utcnow() + timedelta(days=1)
-        ev = EmailVerification(user_id=new_user.id, token=token, expires_at=expires)
-        db.add(ev)
-        db.commit()
+            verification_link = f"{request.url.scheme}://{request.url.hostname}:{request.url.port}/auth/verify-email?token={token}"
+            try:
+                send_verification_email(new_user.email, verification_link)
+            except Exception as ex:
+                print(f'⚠️ Не удалось отправить письмо подтверждения: {ex}')
 
-        verification_link = f"{request.url.scheme}://{request.url.hostname}:{request.url.port}/auth/verify-email?token={token}"
+            access_token = create_access_token(data={"sub": str(new_user.id), "email": new_user.email})
+            refresh_token = create_refresh_token(data={"sub": str(new_user.id)})
+
+            refresh_token_obj = RefreshToken(
+                user_id=new_user.id,
+                token=refresh_token,
+                expires_at=datetime.utcnow()
+            )
+            db.add(refresh_token_obj)
+            db.commit()
+
+            request.session["user_id"] = new_user.id
+
+            return TokenResponse(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                user=to_user_response(new_user)
+            )
+
+        # Firestore mode
+        # Проверяем существование по email
+        existing = fs_get_user_by_email(user_data.email)
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Пользователь с таким email уже существует')
+
+        if not validate_password(user_data.password):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Пароль должен содержать минимум 8 символов')
+
+        user_dict = {
+            'email': user_data.email,
+            'username': user_data.username,
+            'display_name': user_data.display_name or user_data.email.split('@')[0],
+            'hashed_password': None,
+            'is_verified': False,
+        }
+
         try:
-            send_verification_email(new_user.email, verification_link)
-        except Exception as ex:
-            print(f'⚠️ Не удалось отправить письмо подтверждения: {ex}')
+            user_hash = get_password_hash(user_data.password)
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Не удалось обработать пароль. Убедитесь, что пароль соответствует требованиям.')
 
-        access_token = create_access_token(data={"sub": str(new_user.id), "email": new_user.email})
-        refresh_token = create_refresh_token(data={"sub": str(new_user.id)})
+        # assign computed hash into user payload
+        user_dict['hashed_password'] = user_hash
 
-        refresh_token_obj = RefreshToken(
-            user_id=new_user.id,
-            token=refresh_token,
-            expires_at=datetime.utcnow()
-        )
-        db.add(refresh_token_obj)
-        db.commit()
+        created = fs_create_user(user_dict)
+        # For Firestore we don't currently implement email verification flow fully; skip sending email
+        # Create tokens using created.id as identifier
+        access_token = create_access_token(data={"sub": str(created.id), "email": created.email})
+        refresh_token = create_refresh_token(data={"sub": str(created.id)})
 
-        request.session["user_id"] = new_user.id
+        request.session["user_id"] = created.id
 
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            user=to_user_response(new_user)
+            user=to_user_response(created)
         )
-
-    # Firestore mode
-    # Проверяем существование по email
-    existing = fs_get_user_by_email(user_data.email)
-    if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Пользователь с таким email уже существует')
-
-    if not validate_password(user_data.password):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Пароль должен содержать минимум 8 символов')
-
-    user_dict = {
-        'email': user_data.email,
-        'username': user_data.username,
-        'display_name': user_data.display_name or user_data.email.split('@')[0],
-        'hashed_password': get_password_hash(user_data.password),
-        'is_verified': False,
-    }
-
-    created = fs_create_user(user_dict)
-    # For Firestore we don't currently implement email verification flow fully; skip sending email
-    # Create tokens using created.id as identifier
-    access_token = create_access_token(data={"sub": str(created.id), "email": created.email})
-    refresh_token = create_refresh_token(data={"sub": str(created.id)})
-
-    request.session["user_id"] = created.id
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user=to_user_response(created)
-    )
+    except HTTPException:
+        # повторно пробрасываем HTTP ошибки
+        raise
+    except Exception as e:
+        # Логируем непредвиденные ошибки и возвращаем 400 с сообщением для клиента в dev
+        print('[ERROR] Exception in /auth/register:', type(e).__name__, e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f'Ошибка при регистрации: {str(e)}')
 
 
 @router.post("/login", response_model=TokenResponse)

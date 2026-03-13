@@ -446,4 +446,7 @@ body {
     border: 0 !important;
 }
 
+/* Inline rules moved from templates/base.html */
+dialog[open] { display: none !important; visibility: hidden !important; pointer-events: none !important; }
+
 .auth-container { margin-top: 50px; }

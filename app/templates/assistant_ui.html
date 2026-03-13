@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/assistant.css') }}">
+<div class="assistant-page" id="assistantRoot" data-session-id="{{ session_id }}" data-user-id="{{ current_user.id }}">
+    <section class="assistant-shell">
+        <div class="assistant-panel">
+            <div class="assistant-panel-header">
+                <div>
+                    <div class="assistant-badge">⚡ Быстрый AI-ассистент</div>
+                    <h2 class="assistant-title">Спроси, попроси создать квест или событие</h2>
+                    <p class="assistant-subtitle">Ответ отображается с эффектом печати. Если ассистент подготовит квест, можешь открыть экран подтверждения и подправить поля перед созданием.</p>
+                </div>
+            </div>
+
+            <div class="assistant-layout">
+                <div class="assistant-chatbox">
+                    <div class="assistant-input-wrap">
+                        <label for="assistantQuickText" class="label-small">Запрос ассистенту</label>
+                        <textarea id="assistantQuickText" class="textarea-modern assistant-textarea" placeholder="Например: создай квест выучить 20 слов завтра вечером, награда 150"></textarea>
+                        <div class="assistant-actions">
+                            <button id="assistantQuickSubmit" type="button" class="hub-btn assistant-primary-btn">Отправить</button>
+                            <button id="assistantVoiceBtn" type="button" class="hub-btn secondary">🎙 Запись голоса</button>
+                            <span id="assistantVoiceState" class="assistant-voice-indicator">Голосовой ввод: готов</span>
+                        </div>
+                        <div class="assistant-small-note">Рекомендуемый формат записи: <strong>audio/webm</strong>.</div>
+                    </div>
+                </div>
+
+                <div class="assistant-output">
+                    <div id="assistantQuickStatus" class="assistant-status" aria-live="polite"></div>
+                    <div id="assistantQuickStream" class="assistant-stream-box">Здесь появится ответ ассистента.</div>
+                    <div id="assistantQuickMeta" class="assistant-response-meta assistant-hidden"></div>
+                    <div id="assistantQuestDraftCard" class="assistant-card assistant-hidden">
+                        <h3>Черновик квеста</h3>
+                        <div id="assistantQuestDraftList" class="assistant-draft-list"></div>
+                        <a id="assistantConfirmLink" href="#" class="hub-btn assistant-confirm-link">Открыть экран подтверждения</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script src="{{ url_for('static', path='js/main-hub.js') }}" defer></script>
+<script src="{{ url_for('static', path='js/assistant-ui.js') }}" defer></script>
+
+{% endblock %}

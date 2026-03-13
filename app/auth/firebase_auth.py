@@ -14,9 +14,13 @@ from fastapi import HTTPException, status
 from typing import Dict, Any
 
 try:
-    from app.auth.firebase_admin import init_firebase_admin
+    from app.auth.firebase_admin import init_firebase_admin, _FIRESTORE_ENABLED as _FB_FLAG
 except Exception:
     init_firebase_admin = None
+    try:
+        _FB_FLAG = os.environ.get('FIRESTORE_ENABLED', 'true').lower() not in ('0', 'false', 'no', 'off', '')
+    except Exception:
+        _FB_FLAG = True
 
 
 class FirebaseAuthService:
@@ -25,6 +29,12 @@ class FirebaseAuthService:
         self._initialize()
 
     def _initialize(self):
+        # If firestorе is explicitly disabled, skip initialization
+        if not _FB_FLAG:
+            self.initialized = False
+            print('ℹ️ Firestore/Firebase отключены через FIRESTORE_ENABLED')
+            return
+
         try:
             if firebase_admin and getattr(firebase_admin, '_apps', None):
                 self.initialized = True

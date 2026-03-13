@@ -1,10 +1,22 @@
 import os
 import json
 from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Read environment flag early
+_FIRESTORE_ENABLED = os.environ.get('FIRESTORE_ENABLED', 'true').lower() not in ('0', 'false', 'no', 'off', '')
 
 try:
-    import firebase_admin
-    from firebase_admin import credentials, firestore, auth as firebase_auth
+    if _FIRESTORE_ENABLED:
+        import firebase_admin
+        from firebase_admin import credentials, firestore, auth as firebase_auth
+    else:
+        firebase_admin = None
+        credentials = None
+        firestore = None
+        firebase_auth = None
 except Exception:
     firebase_admin = None
     credentials = None
@@ -19,6 +31,10 @@ def init_firebase_admin(cred_json: Optional[str] = None):
         cred_json: JSON-string с credentials. Если None - будет использовано окружение или файл.
     Возвращает экземпляр firestore.Client() или None.
     """
+    if not _FIRESTORE_ENABLED:
+        # Explicitly disabled in environment
+        return None
+
     if firebase_admin is None:
         raise RuntimeError('firebase_admin не установлен (pip install firebase_admin)')
 
@@ -68,6 +84,8 @@ _firestore_client = None
 
 def get_firestore_client():
     global _firestore_client
+    if not _FIRESTORE_ENABLED:
+        return None
     if _firestore_client is None:
         _firestore_client = init_firebase_admin(os.environ.get('FIREBASE_CREDENTIALS'))
     return _firestore_client

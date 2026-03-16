@@ -47,7 +47,17 @@ async def quick_assistant(request: AssistantRequest, current_user: User = Depend
     try:
         return await _fast_assistant.handle(request)
     except Exception as ex:
-        raise HTTPException(status_code=500, detail=f"Ошибка быстрого ассистента: {ex}")
+        # Log full exception and return a graceful AssistantResponse so UI doesn't get 500
+        logger = __import__('logging').getLogger(__name__)
+        logger.exception('Ошибка быстрого ассистента')
+        return AssistantResponse(
+            response_text=f"Ошибка ассистента: {ex}. Попробуйте повторить запрос.",
+            requires_clarification=False,
+            clarification_question=None,
+            intent=None,
+            action=None,
+            tokens_used=0,
+        )
 
 
 @router.post("/psych", response_model=PsychAssistantResponse)
@@ -110,3 +120,34 @@ async def confirm_quest_creation(
         redirect_to=f"/quest-app/quest/{getattr(created, 'id', '')}",
         message="Квест успешно создан",
     )
+
+
+@router.get('/llm-status')
+async def llm_status(current_user: User = Depends(require_user)):
+    # Возвращает статус LLM провайдеров и временно отключённых моделей
+    try:
+        status = _gemini_service.get_status()
+        return status
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Не удалось получить статус LLM: {ex}")
+
+
+@router.post('/llm-reset')
+async def llm_reset(current_user: User = Depends(require_user)):
+    # Dev endpoint: сбросить health/cooldown для внешних провайдеров и очистить unavailable_models
+    try:
+        if getattr(_gemini_service, 'unavailable_models', None):
+            _gemini_service.unavailable_models.clear()
+        if getattr(_gemini_service, 'perplexity', None):
+            try:
+                _gemini_service.perplexity.reset_health()
+            except Exception:
+                pass
+        if getattr(_gemini_service, 'openai', None):
+            try:
+                _gemini_service.openai.reset_health()
+            except Exception:
+                pass
+        return {"ok": True}
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail=f"Не удалось сбросить LLM состояние: {ex}")

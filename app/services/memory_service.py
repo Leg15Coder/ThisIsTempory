@@ -184,10 +184,16 @@ class MemoryService:
             return None
 
     def set_cached_response(self, cache_key: str, payload: dict) -> None:
+        # Ensure we don't persist the 'cached' flag inside the payload to avoid duplicate kwargs on restore
+        try:
+            payload_copy = dict(payload)
+            payload_copy.pop('cached', None)
+        except Exception:
+            payload_copy = payload
         with self._connect() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO assistant_cache (cache_key, payload, created_at) VALUES (?, ?, ?)",
-                (cache_key, json.dumps(payload, ensure_ascii=False), datetime.now(UTC).isoformat()),
+                (cache_key, json.dumps(payload_copy, ensure_ascii=False), datetime.now(UTC).isoformat()),
             )
 
     def save_pending_action(self, confirmation_token: str, user_id: str, payload: dict, session_id: Optional[str] = None) -> None:
@@ -241,6 +247,17 @@ class MemoryService:
                 pass
         with self._connect() as conn:
             conn.execute("DELETE FROM assistant_pending_actions WHERE confirmation_token = ?", (confirmation_token,))
+
+    def delete_cached_response(self, cache_key: str) -> None:
+        """Удалить запись кэша по ключу."""
+        fs = self._fs()
+        if fs is not None:
+            try:
+                fs.collection("assistant_cache").document(cache_key).delete()
+            except Exception:
+                pass
+        with self._connect() as conn:
+            conn.execute("DELETE FROM assistant_cache WHERE cache_key = ?", (cache_key,))
 
     def get_user_calendar(self, user_id: str, date_from=None, date_to=None):
         return self.calendar_service.list_events(date_from=date_from, date_to=date_to)

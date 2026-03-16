@@ -1,26 +1,42 @@
 from __future__ import annotations
 
 import hashlib
+import math
+import time
 from datetime import datetime, timedelta
+from typing import Optional
 
 from app.assistants.base import BaseAssistant
 from app.assistants.intent_router import IntentRouter
 from app.models.assistant_models import Action, ActionStatus, AssistantMode, AssistantRequest, AssistantResponse, IntentType
 from app.services.memory_service import MemoryService
 from app.tasks.rarity_utils import normalize_to_quest_rarity
+from app.services.rate_limiter import get_rate_limiter
+from app.services.gemini_service import GEMMA_MODEL, ModelUnavailableError
 
 
 class FastAssistant(BaseAssistant):
     def __init__(self, gemini_service, memory_service: MemoryService, stt_service, intent_router: IntentRouter) -> None:
         super().__init__(gemini_service, memory_service, stt_service)
         self.intent_router = intent_router
+        # rate limiter instance (singleton)
+        self.rate_limiter = get_rate_limiter()
+        # in-memory embedding cache: { cache_key: { 'emb': list[float], 'payload': dict, 'ts': timestamp } }
+        self.embedding_cache: dict[str, dict] = {}
+        self.embedding_ttl = 7 * 24 * 3600  # 7 days
 
     async def _resolve_text(self, request: AssistantRequest) -> str:
         if request.text and request.text.strip():
             return request.text.strip()
         if request.audio and self.stt_service:
             mime_type = (request.metadata or {}).get("mime_type", "audio/webm")
-            return (await self.stt_service.audio_to_text(request.audio, mime_type=mime_type)).strip()
+            # use audio only if audio model capacity available
+            try:
+                if self.rate_limiter.would_exceed_rpd(self.gemini_service.audio_model):
+                    return ""
+                return (await self.stt_service.audio_to_text(request.audio, mime_type=mime_type)).strip()
+            except Exception:
+                return ""
         return ""
 
     def _cache_key(self, user_id: str, text: str) -> str:
@@ -56,7 +72,8 @@ class FastAssistant(BaseAssistant):
             return Action(type=IntentType.SET_REMINDER, params=params, executed=True, status=ActionStatus.EXECUTED, result=result)
         if intent.intent == IntentType.CREATE_QUEST:
             draft = self._build_quest_draft(params, text)
-            confirmation_token = hashlib.sha256(f"quest-confirm:{user_id}:{session_id}:{draft['title']}".encode("utf-8")).hexdigest()
+            token_source = f"quest-confirm:{user_id}:{session_id or ''}:{draft['title']}"
+            confirmation_token = hashlib.sha256(token_source.encode("utf-8")).hexdigest()
             self.memory_service.save_pending_action(confirmation_token, user_id, {"type": IntentType.CREATE_QUEST.value, "quest": draft}, session_id=session_id)
             return Action(
                 type=IntentType.CREATE_QUEST,
@@ -72,12 +89,78 @@ class FastAssistant(BaseAssistant):
             )
         return None
 
+    def _cosine_sim(self, a: list[float], b: list[float]) -> float:
+        if not a or not b or len(a) != len(b):
+            return 0.0
+        dot = sum(x * y for x, y in zip(a, b))
+        na = math.sqrt(sum(x * x for x in a))
+        nb = math.sqrt(sum(y * y for y in b))
+        if na == 0 or nb == 0:
+            return 0.0
+        return dot / (na * nb)
+
+    def _embedding_cache_lookup(self, emb: list[float]) -> Optional[dict]:
+        now_ts = time.time()
+        best_k = None
+        best_score = 0.0
+        # scan cache
+        for k, v in self.embedding_cache.items():
+            if now_ts - v.get("ts", 0) > self.embedding_ttl:
+                del self.embedding_cache[k]
+                continue
+            score = self._cosine_sim(emb, v.get("emb", []))
+            if score > best_score:
+                best_score = score
+                best_k = k
+        if best_score > 0.86 and best_k:
+            return self.embedding_cache.get(best_k, {}).get("payload")
+        return None
+
     async def handle(self, request: AssistantRequest) -> AssistantResponse:
         text = await self._resolve_text(request)
         cache_key = self._cache_key(request.user_id, text)
         cached = self.memory_service.get_cached_response(cache_key)
         if cached:
-            return AssistantResponse(**cached, cached=True)
+            # If the cached response is the developer local stub but the forced local fallback is disabled,
+            # delete the cached entry and continue to real providers.
+            try:
+                local_stub = getattr(self.gemini_service.settings, 'assistant_local_llm_response', None)
+                force_local = getattr(self.gemini_service.settings, 'assistant_force_local_llm', False)
+                if local_stub and not force_local and isinstance(cached, dict) and cached.get('response_text') == local_stub:
+                    try:
+                        self.memory_service.delete_cached_response(cache_key)
+                    except Exception:
+                        pass
+                    cached = None
+            except Exception:
+                pass
+
+        if cached:
+            # Ensure we don't pass 'cached' twice (old payloads may include this key)
+            try:
+                payload = dict(cached)
+                payload.pop('cached', None)
+            except Exception:
+                payload = cached
+            payload['cached'] = True
+            return AssistantResponse(**payload)
+
+        # compute embedding and try in-memory embedding cache
+        emb = None
+        try:
+            emb = await self.gemini_service.generate_embeddings(text, model=self.gemini_service.embedding_model)
+        except Exception:
+            emb = None
+        if emb and isinstance(emb, list):
+            found = self._embedding_cache_lookup(emb)
+            if found:
+                try:
+                    payload = dict(found)
+                    payload.pop('cached', None)
+                except Exception:
+                    payload = found
+                payload['cached'] = True
+                return AssistantResponse(**payload)
 
         intent = await self.intent_router.detect_intent(text)
         self.memory_service.add_message(request.user_id, "user", text, AssistantMode.QUICK, session_id=request.session_id)
@@ -92,6 +175,9 @@ class FastAssistant(BaseAssistant):
             )
             self.memory_service.add_message(request.user_id, "assistant", response.response_text, AssistantMode.QUICK, session_id=request.session_id)
             self.memory_service.set_cached_response(cache_key, response.model_dump())
+            # store embedding if present
+            if emb:
+                self.embedding_cache[cache_key] = {"emb": emb, "payload": response.model_dump(), "ts": time.time()}
             return response
 
         action = self._execute_action(request.user_id, intent, text, session_id=request.session_id)
@@ -99,14 +185,58 @@ class FastAssistant(BaseAssistant):
         if intent.intent in {IntentType.QUESTION, IntentType.UNKNOWN}:
             summary = self.memory_service.get_summary(request.user_id, request.session_id or "quick-default", AssistantMode.QUICK) if request.session_id else None
             context = self.memory_service.get_context(request.user_id, limit=6, session_id=request.session_id, mode=AssistantMode.QUICK)
-            llm = await self.gemini_service.generate_text(
-                system_prompt=self.gemini_service.get_system_prompt(AssistantMode.QUICK),
-                context_messages=context,
-                summary=summary,
-                prompt=f"Текущий запрос: {text}\nОтветь кратко и по делу.",
-            )
+
+            # Before calling primary model, check rate limiter
+            primary_model = self.gemini_service.default_model
+            try:
+                if self.rate_limiter.would_exceed_rpd(primary_model):
+                    # Force use GEMMA_MODEL (fallback) to avoid 429
+                    llm = await self.gemini_service.generate_text(
+                        system_prompt=self.gemini_service.get_system_prompt(AssistantMode.QUICK),
+                        context_messages=context,
+                        summary=summary,
+                        prompt=f"Текущий запрос: {text}\nОтветь кратко и по делу.",
+                        model=GEMMA_MODEL,
+                    )
+                else:
+                    llm = await self.gemini_service.generate_text(
+                        system_prompt=self.gemini_service.get_system_prompt(AssistantMode.QUICK),
+                        context_messages=context,
+                        summary=summary,
+                        prompt=f"Текущий запрос: {text}\nОтветь кратко и по делу.",
+                    )
+            except ModelUnavailableError as mue:
+                # model not available (404) — return graceful message
+                logger = __import__('logging').getLogger(__name__)
+                logger.error('Gemini model unavailable: %s', mue)
+                return AssistantResponse(response_text='Ассистент временно недоступен (модель не найдена). Попробуйте позже.', action=None, requires_clarification=False, clarification_question=None, intent=intent, tokens_used=0)
+            except Exception as ex:
+                # if any failure, fallback to Gemma
+                try:
+                    llm = await self.gemini_service.generate_text(
+                        system_prompt=self.gemini_service.get_system_prompt(AssistantMode.QUICK),
+                        context_messages=context,
+                        summary=summary,
+                        prompt=f"Текущий запрос: {text}\nОтветь кратко и по делу.",
+                        model=GEMMA_MODEL,
+                    )
+                except ModelUnavailableError as mue2:
+                    logger = __import__('logging').getLogger(__name__)
+                    logger.error('Gemma model unavailable as fallback: %s', mue2)
+                    return AssistantResponse(response_text='Ассистент временно недоступен (fallback модель не найдена). Попробуйте позже.', action=None, requires_clarification=False, clarification_question=None, intent=intent, tokens_used=0)
+                except Exception as ex2:
+                    # final failure — return graceful message
+                    logger = __import__('logging').getLogger(__name__)
+                    logger.error('LLM calls failed: %s', ex2)
+                    return AssistantResponse(response_text='Ассистент временно недоступен. Попробуйте позже.', action=None, requires_clarification=False, clarification_question=None, intent=intent, tokens_used=0)
+
             response_text = llm.get("text") or "Пока не удалось сформировать ответ. Попробуй переформулировать запрос."
             tokens_used = llm.get("tokens_used", 0)
+            raw_llm = None
+            try:
+                raw_llm = str(llm.get('raw') or llm.get('json') or llm.get('text') or llm.get('raw_text') or '')
+            except Exception:
+                raw_llm = None
         else:
             response_text = "Действие подготовлено."
             if action and action.type == IntentType.NAVIGATE:
@@ -126,8 +256,11 @@ class FastAssistant(BaseAssistant):
             clarification_question=None,
             intent=intent,
             tokens_used=tokens_used,
+            raw_llm_response=raw_llm,
         )
         self.memory_service.add_message(request.user_id, "assistant", response.response_text, AssistantMode.QUICK, session_id=request.session_id)
         self.memory_service.set_cached_response(cache_key, response.model_dump())
+        if emb:
+            self.embedding_cache[cache_key] = {"emb": emb, "payload": response.model_dump(), "ts": time.time()}
         return response
 

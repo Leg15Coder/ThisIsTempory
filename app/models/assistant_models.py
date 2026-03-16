@@ -86,6 +86,8 @@ class AssistantResponse(BaseModel):
     intent: Optional[IntentResult] = None
     tokens_used: int = 0
     cached: bool = False
+    # raw response from the underlying LLM/provider for debugging (may contain JSON or HTML)
+    raw_llm_response: Optional[str] = None
 
 
 class PsychAssistantResponse(BaseModel):

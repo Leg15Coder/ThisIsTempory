@@ -1,10 +1,10 @@
 (function(){
-  // Assistant UI logic: receive postMessage commands (start-record/stop-record)
-  // and expose functions to send quick requests and display responses.
+  // Assistant UI logic inside iframe/window
   const statusBox = document.getElementById('assistantQuickStatus');
   const streamBox = document.getElementById('assistantQuickStream');
   const textInput = document.getElementById('assistantQuickText');
   const submitBtn = document.getElementById('assistantQuickSubmit');
+  const closeBtn = document.getElementById('assistantClose');
 
   let mediaRecorder = null;
   let mediaChunks = [];
@@ -26,14 +26,35 @@
       if(!resp.ok){ setStatus(data.detail || 'Ошибка ассистента'); return; }
       showResponseText(data.response_text || '');
       setStatus('Готово');
+      // Debug: show raw LLM response if present
+      try{
+        const metaDiv = document.getElementById('assistantQuickMeta');
+        if(metaDiv && data.raw_llm_response){
+          metaDiv.classList.remove('assistant-hidden');
+          metaDiv.textContent = 'raw_llm_response: ' + data.raw_llm_response.slice(0, 2000);
+        }
+      }catch(e){}
       if(data.action && data.action.confirmation_token){
-        // store draft in localStorage so assistant_confirm can load it
         try{ localStorage.setItem(`assistantDraft:${data.action.confirmation_token}`, JSON.stringify({ draft: data.action.result, sessionId, userId })); }catch(e){}
       }
     }catch(e){ setStatus('Ошибка сети при обращении к ассистенту'); }
   }
 
-  // Audio handling: on start-record, request microphone and start MediaRecorder; on stop-record send audio to /api/assistant/audio-to-text then send quick
+  // Close control inside iframe: send message to parent to close panel
+  if(closeBtn){ closeBtn.addEventListener('click', ()=>{
+    try{ window.parent.postMessage({ type: 'close-panel' }, window.location.origin); } catch(e){}
+  }); }
+
+  // Listen for messages from parent
+  window.addEventListener('message', (ev)=>{
+    if(ev.origin !== window.location.origin) return;
+    const msg = ev.data || {};
+    if(msg.type === 'start-record'){ startRecording(); }
+    if(msg.type === 'stop-record'){ stopRecording(); }
+    if(msg.type === 'close-panel'){ /* optional: close UI inside iframe */ }
+  });
+
+  // Audio handling: same as before
   async function startRecording(){
     if (!navigator.mediaDevices?.getUserMedia) { setStatus('Микрофон не доступен'); return; }
     try{
@@ -55,7 +76,6 @@
           if(!resp.ok){ setStatus(j.detail || 'Ошибка распознавания'); return; }
           const text = j.text || '';
           setStatus('Распознанный текст: ' + text);
-          // send quick assistant request with recognized text
           await sendQuick({ text, user_id: userId, session_id: sessionId });
         }catch(e){ setStatus('Ошибка при отправке аудио на сервер'); }
         stream.getTracks().forEach(t=>t.stop());
@@ -67,14 +87,6 @@
   }
   function stopRecording(){ if(mediaRecorder && isRecording){ mediaRecorder.stop(); isRecording=false; } }
 
-  // PostMessage listener
-  window.addEventListener('message', (ev)=>{
-    if(ev.origin !== window.location.origin) return;
-    const msg = ev.data || {};
-    if(msg.type === 'start-record'){ startRecording(); }
-    if(msg.type === 'stop-record'){ stopRecording(); }
-  });
-
   // UI submit
   if(submitBtn){ submitBtn.addEventListener('click', ()=>{
     const text = (textInput?.value || '').trim();
@@ -83,4 +95,3 @@
   }); }
 
 })();
-

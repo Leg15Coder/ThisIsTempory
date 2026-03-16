@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 from app.models.assistant_models import IntentResult, IntentType
-from app.services.gemini_service import GeminiService
+from app.services.gemini_service import GeminiService, GEMMA_MODEL
 
 
 INTENT_PROMPT = """Ты определяешь намерение пользователя в приложении-помощнике.
@@ -52,11 +52,16 @@ class IntentRouter:
         if not self.gemini_service.enabled:
             return self._fallback_intent(text)
 
-        result = await self.gemini_service.generate_text(
-            prompt=INTENT_PROMPT.format(text=text),
-            model=self.gemini_service.intent_model,
-            response_mime_type="application/json",
-        )
+        # IMPORTANT: force usage of Gemma 4B for intent detection (cheap and RPD-friendly)
+        try:
+            result = await self.gemini_service.generate_text(
+                prompt=INTENT_PROMPT.format(text=text),
+                model=GEMMA_MODEL,
+                response_mime_type="application/json",
+            )
+        except Exception:
+            return self._fallback_intent(text)
+
         payload: dict[str, Any] | None = result.get("json")
         if payload is None:
             try:
@@ -76,4 +81,3 @@ class IntentRouter:
             )
         except Exception:
             return self._fallback_intent(text)
-

@@ -1,0 +1,22 @@
+/* UX styles for assistant UI (assistant_ui.html) */
+.assistant-page { padding: 18px; }
+.assistant-panel { background: transparent; box-shadow: none; }
+.assistant-panel-header { display:flex; gap:12px; align-items:flex-start; justify-content:space-between; }
+.assistant-badge { font-size:13px; background: linear-gradient(90deg,#6e45e2,#8e54ff); color:#fff; padding:6px 10px; border-radius:8px; display:inline-block; }
+.assistant-title { margin: 0 0 6px 0; font-size:18px; }
+.assistant-subtitle { margin:0; color:#57585d; font-size:13px; }
+.assistant-layout { display:flex; gap:18px; margin-top:12px; }
+.assistant-chatbox { flex: 1 1 45%; }
+.assistant-output { flex: 1 1 55%; display:flex; flex-direction:column; gap:8px; }
+.assistant-textarea { width:100%; min-height:120px; padding:12px; border-radius:10px; border:1px solid #e9e9ef; font-size:15px; }
+.assistant-actions { display:flex; gap:8px; margin-top:8px; }
+.assistant-stream-box { background:#fff; padding:14px; border-radius:10px; min-height:160px; border:1px solid rgba(0,0,0,0.04); overflow:auto; font-size:15px; line-height:1.45; }
+.assistant-draft-list { display:flex; flex-direction:column; gap:6px; }
+.assistant-draft-item { padding:8px; border-radius:8px; background:linear-gradient(180deg,#fbfbff,#f7f7ff); border:1px solid rgba(110,69,226,0.06); }
+.assistant-card h3 { margin:0 0 8px 0; }
+.assistant-response-meta { font-size:12px; color:#666; display:flex; gap:10px; align-items:center; }
+.assistant-status { font-size:13px; color:#333; }
+.assistant-hidden { display:none; }
+
+@media (max-width:900px){ .assistant-layout{ flex-direction:column; } .assistant-textarea{ min-height:100px; } .assistant-stream-box{ min-height:140px; } }
+

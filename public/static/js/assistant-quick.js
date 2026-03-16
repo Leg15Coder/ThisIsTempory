@@ -26,9 +26,39 @@
       iframeEl.style.border = '0';
       iframeEl.src = buildIframeSrc();
       iframeEl.onload = function(){ iframeLoaded = true; btn.classList.remove('loading'); };
+      // build header + content
+      content.innerHTML = '';
+      const header = document.createElement('div'); header.className = 'panel-header';
+      const title = document.createElement('div'); title.className = 'panel-title'; title.textContent = 'Быстрый AI-ассистент';
+      const controls = document.createElement('div'); controls.className = 'panel-controls';
+      const closeBtn = document.createElement('button'); closeBtn.title = 'Закрыть'; closeBtn.innerHTML = '✕';
+      const popOutBtn = document.createElement('button'); popOutBtn.title = 'Открыть в новой вкладке'; popOutBtn.innerHTML = '⤢';
+      controls.appendChild(popOutBtn); controls.appendChild(closeBtn);
+      header.appendChild(title); header.appendChild(controls);
+      content.appendChild(header);
+
+      // add iframe container
+      const frameWrap = document.createElement('div'); frameWrap.style.flex = '1 1 auto'; frameWrap.style.minHeight = '180px'; frameWrap.style.overflow = 'hidden';
+      frameWrap.appendChild(iframeEl);
+      content.appendChild(frameWrap);
+
+      // resize handle
+      const resizer = document.createElement('div'); resizer.style.height = '10px'; resizer.style.cursor = 'ns-resize'; resizer.title = 'Изменить высоту'; content.appendChild(resizer);
+
+      // events
+      closeBtn.addEventListener('click', closePanel);
+      popOutBtn.addEventListener('click', () => { window.open(buildIframeSrc(), '_blank'); });
+
+      let startY = 0; let startH = 420; let dragging = false;
+      resizer.addEventListener('mousedown', (e)=>{ dragging = true; startY = e.clientY; startH = iframeEl.clientHeight; e.preventDefault(); });
+      document.addEventListener('mousemove', (e)=>{ if(!dragging) return; const dy = startY - e.clientY; let nh = Math.max(200, startH + dy); iframeEl.style.height = nh + 'px'; });
+      document.addEventListener('mouseup', ()=>{ dragging = false; });
+
       // show spinner while loading
-      content.innerHTML = '<div class="assistant-loading">Загрузка ассистента…</div>';
-      content.appendChild(iframeEl);
+      const spinner = document.createElement('div'); spinner.className = 'assistant-loading'; spinner.textContent = 'Загрузка ассистента…';
+      frameWrap.appendChild(spinner);
+
+      frameWrap.appendChild(iframeEl);
       btn.classList.add('loading');
     }
   }
@@ -50,14 +80,11 @@
 
   function startHoldRecordingSequence() {
     isHolding = true;
-    // open panel and attempt to send start-record to iframe once loaded
     openPanel();
-    // If iframe already loaded, post immediately
     if (iframeLoaded) {
       postToIframe({ type: 'start-record' });
       btn.classList.add('recording');
     } else {
-      // wait for load then post
       const onload = () => {
         setTimeout(() => { postToIframe({ type: 'start-record' }); btn.classList.add('recording'); }, 120);
         iframeEl.removeEventListener('load', onload);
@@ -111,6 +138,15 @@
     if (!panel.classList.contains('assistant-hidden')) {
       if (!panel.contains(e.target) && e.target !== btn) closePanel();
     }
+  });
+
+  // Listen for messages from iframe (e.g., close-panel)
+  window.addEventListener('message', (ev) => {
+    if (ev.origin !== window.location.origin) return;
+    const msg = ev.data || {};
+    if (msg.type === 'close-panel') closePanel();
+    if (msg.type === 'start-record') { startHoldRecordingSequence(); }
+    if (msg.type === 'stop-record') { stopHoldRecordingSequence(); }
   });
 
 })();

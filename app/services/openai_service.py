@@ -5,6 +5,7 @@ from typing import Any, Optional
 import requests
 from datetime import datetime, timedelta, timezone
 from app.core.config import get_settings
+from app.services.model_rankings import get_models_for, update_rankings, load_rankings
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,8 @@ class OpenAIService:
     def __init__(self) -> None:
         self.settings = get_settings()
         self.api_key = self.settings.openai_api_key
-        self.model = self.settings.openai_model
+        ranked = get_models_for('openai') or []
+        self.model = self.settings.openai_model or (ranked[0] if ranked else "gpt-3.5-turbo")
         self.base_url = "https://api.openai.com/v1"
 
         # health/backoff
@@ -109,3 +111,27 @@ class OpenAIService:
         self.failure_count = 0
         self.healthy = True
         self.last_failure = None
+
+    def refresh_available_models(self) -> list[str]:
+        """Best-effort: fetch models from OpenAI /v1/models and update rankings file."""
+        if not self.enabled:
+            return []
+        try:
+            resp = requests.get(f"{self.base_url}/models", headers={"Authorization": f"Bearer {self.api_key}"}, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            models = []
+            if isinstance(data, dict) and 'data' in data:
+                for item in data['data']:
+                    mid = item.get('id')
+                    if mid:
+                        models.append(mid)
+            if models:
+                current = load_rankings() or {}
+                current['openai'] = models + [m for m in current.get('openai', []) if m not in models]
+                update_rankings(current)
+                self.model = current['openai'][0]
+                return current['openai']
+        except Exception as ex:
+            logger.debug("OpenAI refresh failed: %s", ex)
+        return []

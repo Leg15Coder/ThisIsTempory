@@ -33,6 +33,15 @@ SESSION_MAX_AGE_IN_SECONDS = 86400 * 30
 
 settings = get_settings()
 
+from app.services.gemini_service import GeminiService
+from app.services.openrouter_service import OpenRouterService
+from app.services.openai_service import OpenAIService
+from app.services.groq_service import GroqService
+from app.services.zhipu_service import ZhipuService
+from app.services.perplexity_service import PerplexityService
+import asyncio
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan handler: выполняется при старте и завершении приложения"""
@@ -61,9 +70,52 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print('⚠️ Предупреждение: не удалось создать таблицы БД при старте:', e)
 
+        # Start periodic model rankings refresher (runs every 30 hours)
+        async def _rankings_refresher():
+            services = []
+            try:
+                services = [GeminiService(), OpenRouterService(), OpenAIService(), GroqService(), ZhipuService(), PerplexityService()]
+            except Exception as e:
+                print('⚠️ Не удалось инициализировать LLM сервисы для периодического обновления:', e)
+
+            interval = 30 * 3600  # 30 hours
+            try:
+                # run immediately once
+                for s in services:
+                    try:
+                        fn = getattr(s, 'refresh_available_models', None)
+                        if fn:
+                            await asyncio.to_thread(fn)
+                    except Exception as ex:
+                        print(f"[rankings_refresher] refresh failed for {s.__class__.__name__}: {ex}")
+                while True:
+                    await asyncio.sleep(interval)
+                    for s in services:
+                        try:
+                            fn = getattr(s, 'refresh_available_models', None)
+                            if fn:
+                                await asyncio.to_thread(fn)
+                        except Exception as ex:
+                            print(f"[rankings_refresher] refresh failed for {s.__class__.__name__}: {ex}")
+            except asyncio.CancelledError:
+                print('Rankings refresher cancelled')
+
+        app.state.rankings_task = asyncio.create_task(_rankings_refresher())
+
         yield
     finally:
         print(f"{settings.app_name} остановлен")
+        # cancel background task
+        try:
+            task = getattr(app.state, 'rankings_task', None)
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        except Exception as e:
+            print('Ошибка при остановке rankings_task:', e)
 
 app = FastAPI(
     title=settings.app_name,

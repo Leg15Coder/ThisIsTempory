@@ -5,6 +5,7 @@ from typing import Any, Optional
 import requests
 from datetime import datetime, timedelta, timezone
 from app.core.config import get_settings
+from app.services.model_rankings import get_models_for, update_rankings, load_rankings
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,8 @@ class PerplexityService:
     def __init__(self) -> None:
         self.settings = get_settings()
         self.api_key = self.settings.perplexity_api_key
-        self.model = self.settings.perplexity_model
+        ranked = get_models_for('perplexity') or []
+        self.model = self.settings.perplexity_model or (ranked[0] if ranked else None)
         self.base_url = self.settings.perplexity_base_url.rstrip("/")
 
         # health and backoff
@@ -122,3 +124,8 @@ class PerplexityService:
         self.failure_count = 0
         self.healthy = True
         self.last_failure = None
+
+    def refresh_available_models(self) -> list[str]:
+        """Perplexity does not offer a public models list in the same way; keep placeholder"""
+        # Placeholder: Perplexity requires specific API access; leave it to future enhancements
+        return []

@@ -9,14 +9,24 @@ import asyncio
 from typing import Any, Optional
 
 import requests
+import warnings
 
-# Try to import official Google Generative AI SDK if present
+# Try to import official Google Generative AI SDK: prefer new `google.genai`, fallback to legacy `google.generativeai` while suppressing FutureWarning
+genai = None
+_GOOGLE_GENAI_AVAILABLE = False
 try:
-    import google.generativeai as genai
+    import google.genai as genai
     _GOOGLE_GENAI_AVAILABLE = True
 except Exception:
     genai = None
-    _GOOGLE_GENAI_AVAILABLE = False
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', category=FutureWarning)
+            import google.generativeai as genai
+            _GOOGLE_GENAI_AVAILABLE = True
+    except Exception:
+        genai = None
+        _GOOGLE_GENAI_AVAILABLE = False
 
 from app.core.config import get_settings
 from app.models.assistant_models import AssistantMode, MemoryMessage
@@ -24,23 +34,9 @@ from app.services.rate_limiter import get_rate_limiter
 from app.services.perplexity_service import PerplexityService
 from app.services.openai_service import OpenAIService
 from app.services.openrouter_service import OpenRouterService
+from app.services.model_rankings import get_models_for, update_rankings, load_rankings
 
 logger = logging.getLogger(__name__)
-
-
-# Model names and limits (from provided context)
-MAIN_MODEL = "gemini-3.1-flash-lite"  # primary
-GEMMA_MODEL = "gemini-2.0-flash-lite"  # fallback for main on 429 and dedicated for intents (gemma-3-4b often 404s)
-AUDIO_MODEL = "gemini-2.5-flash-tts"  # TTS/transcribe (limited)
-EMBEDDING_MODEL = "gemini-embedding-2"
-
-# Limits known from context (we'll use for local decisioning)
-MODEL_LIMITS = {
-    MAIN_MODEL: {"rpm": 15, "tpm": 250_000, "rpd": 500},
-    GEMMA_MODEL: {"rpm": 30, "tpm": 15_000, "rpd": 14_400},
-    AUDIO_MODEL: {"rpm": 3, "tpm": 10_000, "rpd": 10},
-    EMBEDDING_MODEL: {"rpm": 100, "tpm": 30_000, "rpd": 1_000},
-}
 
 
 class ModelUnavailableError(RuntimeError):
@@ -62,12 +58,17 @@ class GeminiService:
     def __init__(self) -> None:
         self.settings = get_settings()
         self.api_key = self.settings.gemini_api_key
-        self.base_url = self.settings.gemini_base_url.rstrip("/")
-        # default models come from constants; config may override
-        self.default_model = getattr(self.settings, 'gemini_model', None) or MAIN_MODEL
-        self.intent_model = getattr(self.settings, 'gemini_intent_model', None) or GEMMA_MODEL
-        self.audio_model = getattr(self.settings, 'gemini_audio_model', None) or AUDIO_MODEL
-        self.embedding_model = EMBEDDING_MODEL
+        # safe base_url handling: settings may be empty — default to Google's public endpoint used in scripts
+        configured_base = getattr(self.settings, 'gemini_base_url', '') or ''
+        if configured_base:
+            self.base_url = configured_base.rstrip('/')
+        else:
+            self.base_url = 'https://generativelanguage.googleapis.com'
+        # default models come from constants; config may override. Default to the working example model
+        self.default_model = getattr(self.settings, 'gemini_model', None) or 'gemini-2.5-flash'
+        self.intent_model = getattr(self.settings, 'gemini_intent_model', None)
+        self.audio_model = getattr(self.settings, 'gemini_audio_model', None)
+        self.embedding_model = "gemini-embedding-2"
         self.timeout = getattr(self.settings, "gemini_timeout_seconds", 30)
         self.max_retries = getattr(self.settings, "gemini_max_retries", 3)
         # use local rate limiter instance (optionally backed by redis if REDIS_URL provided)
@@ -101,6 +102,37 @@ class GeminiService:
             except Exception as ex:
                 logger.warning("google.generativeai present but failed during init: %s", ex)
                 self._use_google_sdk = False
+
+        # Load initial model rankings from file (do not overwrite file here)
+        ranked = get_models_for('gemini') or []
+        # prefer explicit settings, otherwise fall back to rankings
+        if not self.default_model:
+            self.default_model = ranked[0] if ranked else None
+        if not self.intent_model:
+            # try to pick a light/cheap model for intents
+            candidate = None
+            for r in ranked:
+                if 'gemma' in r or 'lite' in r or '2.0' in r:
+                    candidate = r
+                    break
+            self.intent_model = candidate or (ranked[1] if len(ranked) > 1 else None)
+        if not self.audio_model:
+            # prefer models with tts in name
+            candidate = None
+            for r in ranked:
+                if 'tts' in r or 'audio' in r or 'speech' in r:
+                    candidate = r
+                    break
+            self.audio_model = candidate
+
+        # embedding model from settings or sensible default
+        self.embedding_model = getattr(self.settings, 'gemini_embedding_model', self.embedding_model)
+
+        # attempt to refresh models list from remote (best-effort)
+        try:
+            self.refresh_available_models()
+        except Exception:
+            logger.debug('Gemini refresh_available_models failed during init, continuing with local rankings')
 
     @property
     def enabled(self) -> bool:
@@ -144,9 +176,7 @@ class GeminiService:
         return "\n".join(chunks).strip()
 
     def _post_generate_content_with_retries(self, model: str, parts: list[dict[str, Any]]) -> dict[str, Any]:
-        """Синхронный helper, который выполняет requests.post с retry и возвращает json.
-        Вызывать из async-кода через asyncio.to_thread, чтобы не блокировать loop.
-        """
+        """Синхронный helper, который выполняет requests.post с retry и возвращает json."""
         if not self.enabled:
             raise RuntimeError("GEMINI_API_KEY не настроен")
 
@@ -156,103 +186,96 @@ class GeminiService:
         if disabled_until and now_ts < disabled_until:
             raise ModelUnavailableError(f"Model {model} is temporarily disabled until {disabled_until}")
 
-        # If google SDK is available and configured, try it first (defensive)
+        # If google SDK is available and configured, try it first
         if self._use_google_sdk:
             try:
                 if self.rate_limiter.would_exceed_rpd(model):
                     logger.debug("Rate limiter would exceed, skipping SDK attempt for model %s", model)
                 else:
                     sdk_resp = self._sdk_generate(model, parts)
-                    # treat as success: increment rate limiter and return
                     try:
                         self.rate_limiter.increment(model)
                     except Exception:
                         pass
                     return sdk_resp
             except ModelUnavailableError:
-                # SDK indicated model unavailable (rethrow)
                 raise
             except Exception as ex:
-                logger.info("google.generativeai SDK attempt failed for model %s: %s — falling back to HTTP", model, ex)
+                logger.info("google.generativeai SDK attempt failed: %s — falling back to HTTP", ex)
 
-        # Check local rate limiter before attempting
+        # Check local rate limiter
         if self.rate_limiter.would_exceed_rpd(model):
-            # mark temporarily disabled for short cooldown to avoid repeated attempts
             self.unavailable_models[model] = time.time() + 60
-            raise RuntimeError(f"Rate limit would be exceeded for model {model}")
+            raise RuntimeError(f"Rate limit exceeded for model {model}")
 
-        # We'll try multiple endpoint shapes and payload variants to be tolerant to API format differences
-        prompt = "\n".join([p.get("text", "") for p in parts]).strip()
+        url = f"{self.base_url}/models/{model}:generateContent?key={self.api_key}"
+        payload = {
+            "contents": [{"parts": parts}],
+            "generationConfig": {
+                "maxOutputTokens": 1024,
+                "temperature": 0.7
+            }
+        }
 
-        endpoints = [
-            (f"{self.base_url}/models/{model}:generateContent?key={self.api_key}", "contents_parts"),
-            (f"{self.base_url}/models/{model}:generateText?key={self.api_key}", "input_text"),
-            (f"{self.base_url}/models/{model}:generateMessage?key={self.api_key}", "messages"),
-        ]
+        # Single retry loop for network errors or transient 5xx
+        for attempt in range(self.max_retries):
+            try:
+                response = requests.post(
+                    url=url,
+                    headers={"Content-Type": "application/json"},
+                    data=json.dumps(payload),
+                    timeout=self.timeout
+                )
 
-        payload_variants: list[dict[str, Any]] = []
-        # original parts-style
-        payload_variants.append({"contents": [{"parts": parts}]})
-        # simple input/prompt text
-        if prompt:
-            payload_variants.append({"input": prompt})
-            payload_variants.append({"prompt": prompt})
-            # OpenAI-like messages
-            payload_variants.append({"messages": [{"role": "user", "content": prompt}]})
-            # Generative API 'messages' possible shape
-            payload_variants.append({"messages": [{"author": "user", "content": [{"type": "text", "text": prompt}]}]})
-
-        last_error: Exception | None = None
-        # iterate attempts with exponential backoff
-        for attempt in range(1, self.max_retries + 1):
-            for url, shape in endpoints:
-                for payload in payload_variants:
+                if response.status_code == 200:
                     try:
-                        logger.debug("Gemini trying URL %s with payload shape %s (attempt %s)", url, shape, attempt)
-                        response = requests.post(url, json=payload, timeout=self.timeout)
-                        # log non-2xx for diagnosis
-                        if response.status_code >= 400:
-                            logger.info("Gemini response status %s body: %s", response.status_code, response.text[:2000])
-                        response.raise_for_status()
-                        # increment RPD counter on success
-                        try:
-                            self.rate_limiter.increment(model)
-                        except Exception:
-                            pass
-                        # clear any temporary disable state
-                        if model in self.unavailable_models:
-                            del self.unavailable_models[model]
-                        return response.json()
-                    except requests.HTTPError as ex:
-                        last_error = ex
-                        code = getattr(ex.response, "status_code", None)
-                        logger.warning("Gemini request failed for url %s payload_shape %s on attempt %s: %s", url, shape, attempt, ex)
-                        # If model not found (404) — treat as permanent-ish error, disable and abort
-                        if code == 404:
-                            logger.error("Model %s not found (404) at url %s. Aborting.", model, url)
-                            self.unavailable_models[model] = time.time() + self._disable_404_seconds
-                            raise ModelUnavailableError(f"Model {model} not found: {ex}")
-                        if code == 429:
-                            logger.warning("Model %s returned 429 at url %s; marking short cooldown.", model, url)
-                            self.unavailable_models[model] = time.time() + self._cooldown_429_seconds
-                            raise
-                        # otherwise try next payload/endpoint
-                        continue
+                        self.rate_limiter.increment(model)
+                    except Exception:
+                        pass
+                    # clear unavailability if successful
+                    if model in self.unavailable_models:
+                        del self.unavailable_models[model]
+                    return response.json()
+
+                if response.status_code == 429:
+                    # Save the full body to a local file (do not print huge JSON to console)
+                    try:
+                        body = response.text if hasattr(response, 'text') else str(response)
+                    except Exception:
+                        body = str(response)
+                    ts = int(time.time())
+                    try:
+                        from pathlib import Path
+                        logs_dir = Path("logs")
+                        logs_dir.mkdir(parents=True, exist_ok=True)
+                        file_path = logs_dir / f"gemini_429_{model}_{ts}.json"
+                        with file_path.open("w", encoding="utf-8") as f:
+                            f.write(body)
+                        logger.warning("Gemini 429 for %s — body saved to %s (truncated in console)", model, str(file_path))
                     except Exception as ex:
-                        last_error = ex
-                        logger.warning("Gemini network/transport error for url %s shape %s on attempt %s: %s", url, shape, attempt, ex)
-                        # try next payload/endpoint
-                        continue
+                        logger.warning("Gemini 429 for %s — failed to write body to file: %s", model, ex)
+                    # mark model unavailable for cooldown period
+                    self.unavailable_models[model] = time.time() + self._cooldown_429_seconds
+                    # raise a concise error (caller can inspect saved file if needed)
+                    raise RuntimeError(f"Gemini 429 Too Many Requests for {model}. Body saved to {str(file_path) if 'file_path' in locals() else 'N/A'}")
 
-            # backoff between attempts
-            if attempt < self.max_retries:
-                sleep_for = min(2 ** (attempt - 1), 8)
-                sleep_for = sleep_for + random.uniform(0, 0.5)
-                time.sleep(sleep_for)
+                if response.status_code == 404:
+                    self.unavailable_models[model] = time.time() + self._disable_404_seconds
+                    raise ModelUnavailableError(f"Gemini Model {model} not found (404)")
 
-        # exhausted attempts
-        self.unavailable_models[model] = time.time() + self._cooldown_429_seconds
-        raise RuntimeError(f"Gemini request failed after retries: {last_error}")
+                if 500 <= response.status_code < 600:
+                    logger.warning(f"Gemini 5xx error {response.status_code}, attempt {attempt+1}")
+                    time.sleep(1 + random.random())
+                    continue
+
+                raise RuntimeError(f"Gemini API Error {response.status_code}: {response.text}")
+
+            except requests.RequestException as e:
+                logger.warning(f"Gemini network error attempt {attempt+1}: {e}")
+                time.sleep(1 + random.random())
+                continue
+
+        raise RuntimeError("Gemini max retries exhausted")
 
     def _extract_text(self, data: dict[str, Any]) -> str:
         candidates = data.get("candidates") or []
@@ -352,7 +375,7 @@ class GeminiService:
                 all_parts.append({"text": f"CONTEXT:\n{context_text}"})
         all_parts.append({"text": prompt.strip()})
 
-        primary = model or self.default_model or MAIN_MODEL
+        primary = model or self.default_model or "gemini-3.1-flash-lite"
 
         # Dev: forced local LLM fallback
         if getattr(self.settings, 'assistant_force_local_llm', False):
@@ -379,37 +402,18 @@ class GeminiService:
             logger.debug("Skipping primary model %s because it is temporarily unavailable", primary)
 
         # internal fallback intent model (Gemma or configured fallback) if different and available
-        intent_model = getattr(self, 'intent_model', GEMMA_MODEL)
+        intent_model = getattr(self, 'intent_model', "gemini-2.0-flash-lite")
         if primary != intent_model and model_available(intent_model):
             providers.append(("gemini", intent_model))
         else:
             if primary != intent_model:
                 logger.debug("Skipping intent fallback model because unavailable or same as primary")
 
-        # external providers (perplexity then openai) if allowed
-        # Try OpenRouter first (free models) then Perplexity and OpenAI
-        if self.openrouter.enabled and getattr(self.openrouter, 'can_call', None) and self.openrouter.can_call():
-            providers.append(("openrouter", None))
-        else:
-            if self.openrouter.enabled:
-                logger.debug("OpenRouter skipped (cooldown/unavailable)")
-
-        if self.perplexity.enabled and getattr(self.perplexity, 'can_call', None) and self.perplexity.can_call():
-            providers.append(("perplexity", None))
-        else:
-            if self.perplexity.enabled:
-                logger.debug("Perplexity skipped (cooldown/unavailable)")
-
-        if self.openai.enabled and getattr(self.openai, 'can_call', None) and self.openai.can_call():
-            providers.append(("openai", None))
-        else:
-            if self.openai.enabled:
-                logger.debug("OpenAI skipped (cooldown/unavailable)")
-
-        if not providers:
-            raise RuntimeError("No providers available to answer the request")
-
+        # We intentionally DO NOT fallback to external providers here (openrouter/perplexity/openai)
+        # so that orchestration layer (LLMService) controls the global provider order (including groq, zhipu, mistral, etc.).
+        # Only try the primary and intent Gemini models here.
         last_error: Exception | None = None
+        # primary attempt already appended above if available
         for p_type, p_model in providers:
             try:
                 if p_type == "gemini":
@@ -423,45 +427,18 @@ class GeminiService:
                         "provider": "gemini" if p_model == self.default_model else "gemini-intent",
                     }
                     break
-                elif p_type == "perplexity":
-                    response = await asyncio.to_thread(self.perplexity.generate_content, self._convert_to_openai_messages(all_parts))
-                    text = self.perplexity.extract_text(response)
-                    result = {"text": text, "raw": response, "tokens_used": self.estimate_tokens(text), "provider": "perplexity"}
-                    break
-                elif p_type == "openrouter":
-                    response = await asyncio.to_thread(self.openrouter.generate_content, self._convert_to_openai_messages(all_parts))
-                    text = self.openrouter.extract_text(response)
-                    result = {"text": text, "raw": response, "tokens_used": self.estimate_tokens(text), "provider": "openrouter"}
-                    break
-                elif p_type == "openai":
-                    response = await asyncio.to_thread(self.openai.generate_content, self._convert_to_openai_messages(all_parts))
-                    text = self.openai.extract_text(response)
-                    result = {"text": text, "raw": response, "tokens_used": self.estimate_tokens(text), "provider": "openai"}
-                    break
             except ModelUnavailableError as mue:
-                # mark that model in unavailable_models already done inside _post_generate_content_with_retries
-                logger.info("Provider %s model %s unavailable: %s", p_type, p_model, mue)
+                logger.info("Gemini model %s unavailable: %s", p_model, mue)
                 last_error = mue
                 continue
             except Exception as ex:
-                logger.warning("Provider %s failed: %s", p_type, ex)
+                logger.warning("Gemini model %s failed: %s", p_model, ex)
                 last_error = ex
-                # if we receive rate-limit or auth error from external providers their services mark cooldown internally
                 continue
 
         if not result:
-            logger.error("All LLM attempts failed. Last error: %s", last_error)
-            # Only return the local dev fallback if explicitly enabled
-            if getattr(self.settings, 'assistant_force_local_llm', False):
-                text = getattr(self.settings, 'assistant_local_llm_response', "(DEV) Внешние языковые сервисы недоступны — локальный ответ.")
-                return {"text": text, "raw": None, "tokens_used": 0, "provider": "local"}
-            # Default soft fallback message (no provider)
-            return {
-                "text": "Извините, все внешние языковые сервисы временно недоступны. Попробуйте повторить запрос через несколько минут.",
-                "raw": None,
-                "tokens_used": 0,
-                "provider": "none",
-            }
+            # Let LLMService handle external fallback ordering — raise to indicate gemini could not produce an answer
+            raise RuntimeError(f"Gemini failed for models; last_error={last_error}")
 
         if response_mime_type == "application/json":
             parsed_json: dict[str, Any] | None
@@ -609,3 +586,71 @@ class GeminiService:
         except Exception:
             # Re-raise to let caller fall back to HTTP implementation
             raise
+
+    def refresh_available_models(self):
+        """Attempt to fetch available models from Gemini endpoints and update local rankings file.
+        Best-effort; on failure leaves existing rankings intact.
+        """
+        logger.info("Refreshing available Gemini models from API...")
+        if not self.enabled:
+            logger.debug("Gemini API key not configured; skipping refresh")
+            return []
+
+        endpoints = []
+        # try v1beta then v1
+        if self.base_url:
+            endpoints.append(f"{self.base_url}/v1beta/models?key={self.api_key}")
+            endpoints.append(f"{self.base_url}/v1/models?key={self.api_key}")
+        else:
+            endpoints.append(f"https://generativelanguage.googleapis.com/v1beta/models?key={self.api_key}")
+            endpoints.append(f"https://generativelanguage.googleapis.com/v1/models?key={self.api_key}")
+
+        discovered = []
+        for url in endpoints:
+            try:
+                resp = requests.get(url, timeout=8)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                # possible shapes: {'models': [...]} or {'models': [{'name':...}]}
+                if isinstance(data, dict):
+                    models_list = data.get('models') or data.get('data') or []
+                    for item in models_list:
+                        # item may be string or dict with 'name' or 'model' key
+                        if isinstance(item, str):
+                            discovered.append(item)
+                        elif isinstance(item, dict):
+                            mid = item.get('name') or item.get('id') or item.get('model')
+                            if mid:
+                                discovered.append(mid)
+                elif isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict):
+                            mid = item.get('name') or item.get('id') or item.get('model')
+                            if mid:
+                                discovered.append(mid)
+                if discovered:
+                    break
+            except Exception as ex:
+                logger.debug('Gemini discovery attempt failed for %s: %s', url, ex)
+                continue
+
+        # merge with existing rankings
+        try:
+            current = get_models_for('gemini') or []
+            merged = discovered + [m for m in current if m not in discovered]
+            if merged:
+                # preserve other provider rankings
+                existing = load_rankings() or {}
+                existing['gemini'] = merged
+                update_rankings(existing)
+                # update local pointers if not set
+                if not self.default_model:
+                    self.default_model = merged[0]
+                if not self.intent_model and len(merged) > 1:
+                    self.intent_model = merged[1]
+                return merged
+        except Exception as ex:
+            logger.debug('Failed to merge/update gemini model rankings: %s', ex)
+
+        return []

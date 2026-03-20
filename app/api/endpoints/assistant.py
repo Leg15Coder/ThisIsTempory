@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
+import logging
 
 from app.assistants.fast_assistant import FastAssistant
 from app.assistants.intent_router import IntentRouter
@@ -18,21 +19,23 @@ from app.models.assistant_models import (
     ConfirmQuestRequest,
     ConfirmQuestResponse,
 )
-from app.services.gemini_service import GeminiService
+from app.services.llm_service import LLMService
 from app.services.memory_service import MemoryService
 from app.services.stt_service import STTService
-from app.tasks.database import get_db
+from app.tasks.dependencies import get_db
 from app.tasks.service import QuestService
 from app.tasks.rarity_utils import normalize_to_quest_rarity
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
 _memory_service = MemoryService()
-_gemini_service = GeminiService()
-_stt_service = STTService(_gemini_service)
-_intent_router = IntentRouter(_gemini_service)
-_fast_assistant = FastAssistant(_gemini_service, _memory_service, _stt_service, _intent_router)
-_psych_assistant = PsychAssistant(_gemini_service, _memory_service, _stt_service)
+_llm_service = LLMService()
+_stt_service = STTService()
+_intent_router = IntentRouter(_llm_service)
+_fast_assistant = FastAssistant(_llm_service, _memory_service, _stt_service, _intent_router)
+_psych_assistant = PsychAssistant(_llm_service, _memory_service, _stt_service)
 
 
 def _ensure_user_scope(request: AssistantRequest, current_user: User) -> AssistantRequest:
@@ -126,7 +129,7 @@ async def confirm_quest_creation(
 async def llm_status(current_user: User = Depends(require_user)):
     # Возвращает статус LLM провайдеров и временно отключённых моделей
     try:
-        status = _gemini_service.get_status()
+        status = _llm_service.gemini.get_status()
         return status
     except Exception as ex:
         raise HTTPException(status_code=500, detail=f"Не удалось получить статус LLM: {ex}")
@@ -136,16 +139,16 @@ async def llm_status(current_user: User = Depends(require_user)):
 async def llm_reset(current_user: User = Depends(require_user)):
     # Dev endpoint: сбросить health/cooldown для внешних провайдеров и очистить unavailable_models
     try:
-        if getattr(_gemini_service, 'unavailable_models', None):
-            _gemini_service.unavailable_models.clear()
-        if getattr(_gemini_service, 'perplexity', None):
+        if getattr(_llm_service.gemini, 'unavailable_models', None):
+            _llm_service.gemini.unavailable_models.clear()
+        if getattr(_llm_service.gemini, 'perplexity', None):
             try:
-                _gemini_service.perplexity.reset_health()
+                _llm_service.gemini.perplexity.reset_health()
             except Exception:
                 pass
-        if getattr(_gemini_service, 'openai', None):
+        if getattr(_llm_service.gemini, 'openai', None):
             try:
-                _gemini_service.openai.reset_health()
+                _llm_service.gemini.openai.reset_health()
             except Exception:
                 pass
         return {"ok": True}

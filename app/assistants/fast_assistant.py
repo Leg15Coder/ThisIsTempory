@@ -12,7 +12,7 @@ from app.models.assistant_models import Action, ActionStatus, AssistantMode, Ass
 from app.services.memory_service import MemoryService
 from app.tasks.rarity_utils import normalize_to_quest_rarity
 from app.services.rate_limiter import get_rate_limiter
-from app.services.llm_service import LLMService
+from app.services.llm_services.llm_service import LLMService
 
 
 class FastAssistant(BaseAssistant):
@@ -230,4 +230,3 @@ class FastAssistant(BaseAssistant):
         if emb:
             self.embedding_cache[cache_key] = {"emb": emb, "payload": response.model_dump(), "ts": time.time()}
         return response
-

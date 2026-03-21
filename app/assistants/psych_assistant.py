@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.assistants.base import BaseAssistant
 from app.models.assistant_models import AssistantMode, AssistantRequest, AssistantResponse
-from app.services.llm_service import LLMService
+from app.services.llm_services.llm_service import LLMService
 
 class PsychAssistant(BaseAssistant):
     # BaseAssistant init takes llm_service

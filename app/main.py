@@ -33,7 +33,7 @@ SESSION_MAX_AGE_IN_SECONDS = 86400 * 30
 
 settings = get_settings()
 
-from app.services.gemini_service import GeminiService
+from app.services.llm_services.gemini_service import GeminiService
 from app.services.openrouter_service import OpenRouterService
 from app.services.openai_service import OpenAIService
 from app.services.groq_service import GroqService

@@ -14,8 +14,8 @@ class PerplexityService:
         self.settings = get_settings()
         self.api_key = self.settings.perplexity_api_key
         ranked = get_models_for('perplexity') or []
-        self.model = self.settings.perplexity_model or (ranked[0] if ranked else None)
-        self.base_url = self.settings.perplexity_base_url.rstrip("/")
+        self.model = 'sonar'
+        self.base_url = 'https://api.perplexity.ai/v1'
 
         # health and backoff
         self.healthy: bool = True

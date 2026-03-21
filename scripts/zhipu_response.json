@@ -1,0 +1,29 @@
+{
+    "choices": [
+        {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+                "content": "",
+                "reasoning_content": "1.  **Analyze the User's Request:**\n    *   **Input:** \"Привет! Как дела? Ответь одним предложением.\" (Hi! How are you? Answer in one sentence.)\n    *   **Intent:** The user is greeting me and asking for a status update in a specific constraint (one sentence).\n    *   **Language:** Russian.\n\n2.  **Determine the Persona/Role:**\n    *   I am an AI assistant. I don't",
+                "role": "assistant"
+            }
+        }
+    ],
+    "created": 1773742971,
+    "id": "20260317182242c3d11f3ced8a420a",
+    "model": "glm-4.7-flash",
+    "object": "chat.completion",
+    "request_id": "20260317182242c3d11f3ced8a420a",
+    "usage": {
+        "completion_tokens": 100,
+        "completion_tokens_details": {
+            "reasoning_tokens": 100
+        },
+        "prompt_tokens": 17,
+        "prompt_tokens_details": {
+            "cached_tokens": 3
+        },
+        "total_tokens": 117
+    }
+}

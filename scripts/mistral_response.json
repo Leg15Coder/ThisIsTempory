@@ -1,0 +1,25 @@
+{
+    "id": "bc85f6d80ee04ede94179c8e5e5eef59",
+    "created": 1773743045,
+    "model": "mistral-small-latest",
+    "usage": {
+        "prompt_tokens": 28,
+        "total_tokens": 41,
+        "completion_tokens": 13,
+        "prompt_tokens_details": {
+            "cached_tokens": 0
+        }
+    },
+    "object": "chat.completion",
+    "choices": [
+        {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+                "role": "assistant",
+                "tool_calls": null,
+                "content": "Привет! Всё отлично, а у тебя?"
+            }
+        }
+    ]
+}

@@ -1,0 +1,33 @@
+{
+    "id": "chatcmpl-766da2fe-d138-436b-a54e-8db1a1fe3fee",
+    "object": "chat.completion",
+    "created": 1773743125,
+    "model": "llama-3.3-70b-versatile",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "У меня всё хорошо, спасибо, я готов помочь с любыми вопросами или темами, которые ты хочешь обсудить!"
+            },
+            "logprobs": null,
+            "finish_reason": "stop"
+        }
+    ],
+    "usage": {
+        "queue_time": 0.047327306,
+        "prompt_tokens": 49,
+        "prompt_time": 0.002236608,
+        "completion_tokens": 31,
+        "completion_time": 0.151637191,
+        "total_tokens": 80,
+        "total_time": 0.153873799
+    },
+    "usage_breakdown": null,
+    "system_fingerprint": "fp_ce7bc1685b",
+    "x_groq": {
+        "id": "req_01kkxn8cvvfq9an1687qvd5p1w",
+        "seed": 2086829937
+    },
+    "service_tier": "on_demand"
+}

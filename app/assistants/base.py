@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from app.models.assistant_models import AssistantRequest, AssistantResponse
-from app.services.llm_service import LLMService
+from app.services.llm_services.llm_service import LLMService
 from app.services.memory_service import MemoryService
 from app.services.stt_service import STTService
 

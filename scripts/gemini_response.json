@@ -1,0 +1,30 @@
+{
+    "candidates": [
+        {
+            "content": {
+                "parts": [
+                    {
+                        "text": "Привет! Хорошо, спасибо!"
+                    }
+                ],
+                "role": "model"
+            },
+            "finishReason": "STOP",
+            "index": 0
+        }
+    ],
+    "usageMetadata": {
+        "promptTokenCount": 12,
+        "candidatesTokenCount": 7,
+        "totalTokenCount": 56,
+        "promptTokensDetails": [
+            {
+                "modality": "TEXT",
+                "tokenCount": 12
+            }
+        ],
+        "thoughtsTokenCount": 37
+    },
+    "modelVersion": "gemini-2.5-flash",
+    "responseId": "2Cy5aZeTJNHOnsEPk_iTqAc"
+}

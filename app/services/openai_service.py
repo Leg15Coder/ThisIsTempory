@@ -14,7 +14,7 @@ class OpenAIService:
         self.settings = get_settings()
         self.api_key = self.settings.openai_api_key
         ranked = get_models_for('openai') or []
-        self.model = self.settings.openai_model or (ranked[0] if ranked else "gpt-3.5-turbo")
+        self.model = "gpt-3.5-turbo"
         self.base_url = "https://api.openai.com/v1"
 
         # health/backoff

@@ -1,0 +1,35 @@
+{
+  "gemini": {
+    "text":
+    {
+      "gemini-3.1-flash-lite:generateContent": 0.9,
+      "gemini-2.5-flash:generateContent": 0.8,
+      "gemini-2.5-flash-lite:generateContent": 0.7,
+      "Gemini 3 Flash:generateContent": 0.6
+    },
+    "audio":
+    {
+      "gemini-2.5-flash-preview-tts:generateContent": 1.0
+    },
+    "image":
+    {
+      "imagen-4-generate:generateContent": 1.0,
+      "imagen-4-fast-generate:generateContent": 1.0,
+      "imagen-4-ultra-generate:generateContent": 1.0
+    },
+    "embedding":
+    {
+      "embedding-002:embedContent": 1.0,
+      "embedding-001:embedContent": 0.02
+    },
+    "small" : {
+      "gemma-3-1b-it:generateContent": 0.1,
+      "gemma-3-2b-it:generateContent": 0.2,
+      "gemma-3-4b-it:generateContent": 0.4,
+      "gemma-3-12b-it:generateContent": 1.2,
+      "gemma-3-27b-it:generateContent": 2.7
+    },
+    "geolocation" : {},
+    "other": {}
+  }
+}

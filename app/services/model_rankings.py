@@ -11,9 +11,7 @@ RANKINGS_PATH = Path(__file__).parent / "model_rankings.json"
 
 def load_rankings() -> Dict[str, List[str]]:
     try:
-        with open(RANKINGS_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return dict(data.items())
+        return {}
     except Exception as e:
         logger.exception("Failed to load model rankings: %s", e)
         return {}

@@ -28,12 +28,8 @@ class Settings(BaseSettings):
 
     # Assistant / Gemini
     gemini_api_key: str = ""
-    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
-    gemini_model: str = "gemini-2.0-flash"
-    gemini_intent_model: str = "gemini-2.0-flash-lite"
-    gemini_audio_model: str = "gemini-2.0-flash"
     gemini_timeout_seconds: int = 30
-    gemini_max_retries: int = 3
+    gemini_max_retries: int = 5
     gemini_model_disable_404_seconds: int = 3600  # how long to mark a model disabled on 404 (default 1 hour)
     gemini_model_cooldown_429_seconds: int = 60   # cooldown on 429 (short)
     assistant_context_messages: int = 8
@@ -41,13 +37,8 @@ class Settings(BaseSettings):
 
     # Fallback Providers
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
     perplexity_api_key: str = ""
-    perplexity_model: str = "sonar"
-    perplexity_base_url: str = "https://api.perplexity.ai"
     openrouter_api_key: str = ""
-    openrouter_model: str = "gpt-3.5-mini"
-    openrouter_base_url: str = "https://api.openrouter.ai"
 
     # Local fallback assistant (dev helper) — when true, GeminiService вернёт локальный ответ вместо вызова внешних LLM
     assistant_force_local_llm: bool = False

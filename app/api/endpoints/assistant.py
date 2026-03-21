@@ -19,7 +19,7 @@ from app.models.assistant_models import (
     ConfirmQuestRequest,
     ConfirmQuestResponse,
 )
-from app.services.llm_service import LLMService
+from app.services.llm_services.llm_service import LLMService
 from app.services.memory_service import MemoryService
 from app.services.stt_service import STTService
 from app.tasks.dependencies import get_db
@@ -123,34 +123,3 @@ async def confirm_quest_creation(
         redirect_to=f"/quest-app/quest/{getattr(created, 'id', '')}",
         message="Квест успешно создан",
     )
-
-
-@router.get('/llm-status')
-async def llm_status(current_user: User = Depends(require_user)):
-    # Возвращает статус LLM провайдеров и временно отключённых моделей
-    try:
-        status = _llm_service.gemini.get_status()
-        return status
-    except Exception as ex:
-        raise HTTPException(status_code=500, detail=f"Не удалось получить статус LLM: {ex}")
-
-
-@router.post('/llm-reset')
-async def llm_reset(current_user: User = Depends(require_user)):
-    # Dev endpoint: сбросить health/cooldown для внешних провайдеров и очистить unavailable_models
-    try:
-        if getattr(_llm_service.gemini, 'unavailable_models', None):
-            _llm_service.gemini.unavailable_models.clear()
-        if getattr(_llm_service.gemini, 'perplexity', None):
-            try:
-                _llm_service.gemini.perplexity.reset_health()
-            except Exception:
-                pass
-        if getattr(_llm_service.gemini, 'openai', None):
-            try:
-                _llm_service.gemini.openai.reset_health()
-            except Exception:
-                pass
-        return {"ok": True}
-    except Exception as ex:
-        raise HTTPException(status_code=500, detail=f"Не удалось сбросить LLM состояние: {ex}")
